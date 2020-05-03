@@ -184,8 +184,7 @@ def simulate_device(device, samples, stop):
 
 def read_conf_file(file):
 	run_time = 0
-	service = Service("http://orion:1026","4jggokgpepnvsb2uv4s40d59ov","Devices","/iot/d")
-	apikey = service.apikey
+	apikey = ""
 	devices = []
 	sample = []
 	t=0;h=0;l=0;c=0
@@ -230,11 +229,7 @@ def main():
 	#read from confg file ...
 	run_time,service,devices,sample=read_conf_file('DummyDevices.conf')
 
-
-	#service = Service("http://orion:1026","4jggokgpepnvsb2uv4s40d59ov","Devices","/iot/d")
 	service.provision()
-	#devices.append(Device("temperatureSensor007","TemperatureSensor","urn:ngsi-ld:TemperatureSensor:007","PDI-IoTA-UltraLight","4jggokgpepnvsb2uv4s40d59ov"))
-	#devices[0].provision()
 	
 	stop_threads = False
 	threads = []
