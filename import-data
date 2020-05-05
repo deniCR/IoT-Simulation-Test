@@ -1,0 +1,202 @@
+#!/bin/bash
+# 
+#  curl commands to reload the data from the previous tutorial
+#
+#
+
+set -e
+
+printf "⏳  Loading context data "
+
+curl -L -X POST 'http://192.168.0.108:1026/v2/op/update' \
+-H 'Content-Type: application/json' \
+-H 'Content-Type: text/plain' \
+--data-raw '{
+  "actionType":"APPEND",
+  "entities":[
+        {
+		    "id": "urn:ngsi-ld:Estation:001","type": "Estation",
+		    "denomination": {"type": "Text","value": "Manofacture Estation"},
+		    "productiviti": {"type": "Float","value": "0.0"},
+		    "temperature": {"type": "Property","value": "25"},
+		    "humidity": {"type": "Property","value": "70"},
+		    "luminosity": {"type": "Property","value": "650"},
+		    "CO2": {"type": "Property","value": "600"},
+		    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:001"}
+        },
+        {
+		    "id": "urn:ngsi-ld:Estation:002","type": "Estation",
+		    "denomination": {"type": "Text","value": "Manofacture Estation"},
+		    "productiviti": {"type": "Float","value": "0.0"},
+		    "temperature": {"type": "Property","value": "25"},
+		    "humidity": {"type": "Property","value": "70"},
+		    "luminosity": {"type": "Property","value": "650"},
+		    "CO2": {"type": "Property","value": "600"},
+		    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:002"}
+        },
+        {
+		    "id": "urn:ngsi-ld:Estation:003","type": "Estation",
+		    "denomination": {"type": "Text","value": "Manofacture Estation"},
+		    "productiviti": {"type": "Float","value": "0.0"},
+		    "temperature": {"type": "Property","value": "25"},
+		    "humidity": {"type": "Property","value": "70"},
+		    "luminosity": {"type": "Property","value": "650"},
+		    "CO2": {"type": "Property","value": "600"},
+		    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:003"}
+        },
+		{
+			"type": "Script","id": "urn:ngsi-ld:Script:001",
+		    "processState": {"type": "Integer","value": "0"},
+		    "productiviti": {"type": "Fload","value": "0.0"},
+		    "assemblyTime": {"type": "Integer","value": "60"},
+		    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+		    "name": {"type": "Text","value": "Script B001"}
+		},
+		{
+			"type": "Script","id": "urn:ngsi-ld:Script:002",
+		    "processState": {"type": "Integer","value": "0"},
+		    "productiviti": {"type": "Fload","value": "0.0"},
+		    "assemblyTime": {"type": "Integer","value": "60"},
+		    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+		    "name": {"type": "Text","value": "Script B002"}
+		},
+		{
+			"type": "Script","id": "urn:ngsi-ld:Script:003",
+		    "processState": {"type": "Integer","value": "0"},
+		    "productiviti": {"type": "Fload","value": "0.0"},
+		    "assemblyTime": {"type": "Integer","value": "60"},
+		    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+		    "name": {"type": "Text","value": "Script B003"}
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:001"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:002"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:003"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:004"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:005"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:006"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:007"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:008"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:009"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:010"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:011"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:012"
+		},
+		{
+			"type": "Requirements","id": "urn:ngsi-ld:Requirements:013"
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:001",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:001"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:002",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:002"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:003",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:003"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:004",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:004"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:005",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:005"},
+		    "name": {"type": "Text","value": "Assembly task"}	
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:006",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:006"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:007",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:007"},
+		    "name": {"type": "Text","value": "Assembly task"}	
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:008",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:008"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:009",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:009"},
+		    "name": {"type": "Text","value": "Assembly task"}	
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:010",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:010"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:011",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:011"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:012",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:012"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		},
+		{
+			"type": "Task","id": "urn:ngsi-ld:Task:013",
+		    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:003"},
+		    "assemblyTime": {"type": "Float","value": "10"},
+		    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:0013"},
+		    "name": {"type": "Text","value": "Assembly task"}
+		}
+  ]
+}'
