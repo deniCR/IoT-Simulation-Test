@@ -5,6 +5,7 @@ import threading
 import random
 
 host = "http://192.168.0.108"
+orion = host + ":1026"
 iot_agent = host + ":4041/iot"
 agent_reciver = host + ":7896/iot"
 iot_headers = {
@@ -14,6 +15,10 @@ iot_headers = {
 }
 ul_headers = {
 	'Content-Type': 'text/plain'
+}
+entities_headers = {
+  'Content-Type': 'application/json',
+  'Content-Type': 'text/plain'
 }
 
 def post(url,headers,payload):
@@ -29,6 +34,33 @@ def post(url,headers,payload):
 			print ("Timeout Error:",errt)
 	except requests.exceptions.RequestException as err:
 			print ("OOps: Something Else",err)
+
+class Worker:
+	def __init__(self,id, name, rfidCode):
+		self.cbroker = cbroker
+		self.entity_type = "Worker"
+		self.entity_id = id
+		self.entity_name = name
+		self.entity_rfidCode = rfidCode
+		self.broker_url = orion + "v2/entities"
+		self.payload = {
+				"Worker": [
+					{
+						"type": self.entity_type,
+						"id": self.entity_id,
+						"rfidCode": self.entity_rfidCode,
+						"name": self.entity_name
+					}
+				]
+		}
+
+	def provision(self):
+		url = self.broker_url
+		post(url,entities_headers,json.dumps(self.payload))
+
+	#def init_script
+
+	#def next_task
 
 class Service:
 	def __init__(self, cbroker, apikey, entity_type, resource):
@@ -99,7 +131,7 @@ class TempSensor(Device):
 							{ "object_id": "t", "name": "temperature", "type": "Float" }
 						],
 						"static_attributes": [
-							{ "name":"refStore", "type": "Relationship", "value": self.ref}
+							{ "name":"refRequirement", "type": "Relationship", "value": self.ref}
 						]
 				}
 				]
@@ -120,7 +152,7 @@ class HumSensor(Device):
 							{ "object_id": "h", "name": "humidity", "type": "Float" }
 						],
 						"static_attributes": [
-							{ "name":"refStore", "type": "Relationship", "value": self.ref}
+							{ "name":"refRequirement", "type": "Relationship", "value": self.ref}
 						]
 				}
 				]
@@ -141,7 +173,7 @@ class LightSensor(Device):
 							{ "object_id": "l", "name": "Light", "type": "Integer" }
 						],
 						"static_attributes": [
-							{ "name":"refStore", "type": "Relationship", "value": self.ref}
+							{ "name":"refRequirement", "type": "Relationship", "value": self.ref}
 						]
 				}
 				]
@@ -162,7 +194,50 @@ class CO2Sensor(Device):
 							{ "object_id": "c", "name": "CO2", "type": "Integer" }
 						],
 						"static_attributes": [
-							{ "name":"refStore", "type": "Relationship", "value": self.ref}
+							{ "name":"refRequirement", "type": "Relationship", "value": self.ref}
+						]
+				}
+				]
+			}
+
+class weightSensor (Device):
+	def __init__(self, id, protocol, apikey, ref):
+		super().__init__("weightSensor"+str(id), "WeightSensor", "WeightSensor:"+str(id), protocol, apikey)
+		self.ref = ref
+		self.payload = {
+			 "devices": [
+				 {
+					 "device_id":   self.device_id,
+					 "entity_name": self.entity_name,
+					 "entity_type": self.entity_type,
+					 "protocol":    self.protocol,
+					 "attributes": [
+							{ "object_id": "w", "name": "Weight", "type": "Float" }
+						],
+						"static_attributes": [
+						
+							{ "name":"refRequirement", "type": "Relationship", "value": self.ref}
+						]
+				}
+				]
+			}
+
+class motionSensor (Device):
+	def __init__(self, id, protocol, apikey, ref):
+		super().__init__("motionSensor"+str(id), "MotionSensor", "MotionSensor:"+str(id), protocol, apikey)
+		self.ref = ref
+		self.payload = {
+			 "devices": [
+				 {
+					 "device_id":   self.device_id,
+					 "entity_name": self.entity_name,
+					 "entity_type": self.entity_type,
+					 "protocol":    self.protocol,
+					 "attributes": [
+							{ "object_id": "m", "name": "Motion", "type": "Integer" }
+						],
+						"static_attributes": [
+							{ "name":"refRequirement", "type": "Relationship", "value": self.ref}
 						]
 				}
 				]
@@ -177,8 +252,8 @@ def simulate_device(device, samples, stop):
 		device.send_data()
 		if stop():
 			break
-		print(i)
 		i+=1
+		print(i)
 		sleep(sleeptime)
 		pass
 

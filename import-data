@@ -8,12 +8,11 @@ set -e
 
 printf "⏳  Loading context data "
 
-curl -s -o /dev/null -X POST \
-  'http://orion:1026/v2/op/update' \
-  -H 'Content-Type: application/json' \
+curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
+  	-H 'Content-Type: application/json' \
 	--data-raw '{
-	  "actionType":"APPEND",
-	  "entities":[
+		"actionType":"APPEND",
+	  	"entities":[
 	        {
 			    "id": "urn:ngsi-ld:Estation:001","type": "Estation",
 			    "denomination": {"type": "Text","value": "Manofacture Estation"},
@@ -22,7 +21,8 @@ curl -s -o /dev/null -X POST \
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
 			    "CO2": {"type": "Property","value": "600"},
-			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:001"}
+			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:001"},
+			    "refNextEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:002"}
 	        },
 	        {
 			    "id": "urn:ngsi-ld:Estation:002","type": "Estation",
@@ -32,7 +32,9 @@ curl -s -o /dev/null -X POST \
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
 			    "CO2": {"type": "Property","value": "600"},
-			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:002"}
+			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:002"},
+			    "refPreviousEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:001"},
+			    "refNextEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:003"}
 	        },
 	        {
 			    "id": "urn:ngsi-ld:Estation:003","type": "Estation",
@@ -42,7 +44,20 @@ curl -s -o /dev/null -X POST \
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
 			    "CO2": {"type": "Property","value": "600"},
-			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:003"}
+			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:003"},
+			    "refPreviousEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:002"},
+			    "refNextEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:004"}
+	        },
+	        {
+			    "id": "urn:ngsi-ld:Estation:004","type": "Estation",
+			    "denomination": {"type": "Text","value": "Manofacture Estation"},
+			    "productiviti": {"type": "Float","value": "0.0"},
+			    "temperature": {"type": "Property","value": "25"},
+			    "humidity": {"type": "Property","value": "70"},
+			    "luminosity": {"type": "Property","value": "650"},
+			    "CO2": {"type": "Property","value": "600"},
+			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:004"},
+			    "refPreviousEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:003"},
 	        },
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:001",
@@ -67,6 +82,14 @@ curl -s -o /dev/null -X POST \
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Script B003"}
+			},
+			{
+				"type": "Script","id": "urn:ngsi-ld:Script:004",
+			    "processState": {"type": "Integer","value": "0"},
+			    "productiviti": {"type": "Fload","value": "0.0"},
+			    "assemblyTime": {"type": "Integer","value": "60"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "name": {"type": "Text","value": "Script B004"}
 			},
 			{
 				"type": "Requirements","id": "urn:ngsi-ld:Requirements:001"
@@ -112,6 +135,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:001"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -119,6 +143,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:002"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -126,6 +151,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:003"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -133,6 +159,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:004"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -140,6 +167,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:005"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}	
 			},
 			{
@@ -147,6 +175,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:006"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -154,6 +183,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:007"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}	
 			},
 			{
@@ -161,6 +191,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:008"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -168,6 +199,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:009"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}	
 			},
 			{
@@ -175,6 +207,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:010"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -182,6 +215,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:011"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -189,6 +223,7 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:012"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -196,7 +231,32 @@ curl -s -o /dev/null -X POST \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:003"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:0013"},
+			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Assembly task"}
 			}
 	  ]
+	}'
+
+#The data that is "sent" can be filtered through the variables fiware-* and by the value idPattern 
+
+curl -s -o /dev/null -X POST 'http://orion:1026/v2/subscriptions/' \
+	-H 'Content-Type: application/json' \
+	-H 'fiware-service: openiot' \
+	-H 'fiware-servicepath: /' \
+	-H 'Content-Type: text/plain' \
+	--data-raw '{
+	  	"description": "Notify Draco of all context changes",
+	  	"subject": {
+	    	"entities": [
+	     		{
+	        		"idPattern": ".*"
+	      		}
+	    	]
+	  	},
+	  	"notification": {
+	    	"http": {
+	      		"url": "http://draco:5050/v2/notify"
+	    	}
+	  	},
+	  	"throttling": 5
 	}'
