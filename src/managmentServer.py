@@ -10,7 +10,7 @@ payload = {
 	"description": "Notify Server of all RFID context changes",
 	"subject": { 
 		"entities": [
-	    	{ "idPattern": ".*"} 
+	    	{ "idPattern": ".*", "type": "RFIDSensor"} 
 	    	]
 	},
 	"notification": {
@@ -21,7 +21,9 @@ payload = {
 	"throttling": 5
 }
 headers = {
-  'Content-Type': 'application/json'
+  'Content-Type': 'application/json',
+  'fiware-service': 'openiot',
+  'fiware-servicepath': '/'
 }
 
 lastrequest=""
