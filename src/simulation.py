@@ -4,7 +4,8 @@ from time import sleep
 import threading
 import random
 
-host = "http://192.168.0.108"
+cbroker = "http://orion:1026"
+host = "http://192.168.2.108"
 orion = host + ":1026"
 iot_agent = host + ":4041/iot"
 agent_reciver = host + ":7896/iot"
@@ -36,13 +37,13 @@ def post(url,headers,payload):
 			print ("OOps: Something Else",err)
 
 class Worker:
-	def __init__(self,id, name, rfidCode):
+	def __init__(self,id, name, rfidCode, rfidSensor, button):
 		self.cbroker = cbroker
 		self.entity_type = "Worker"
 		self.entity_id = id
 		self.entity_name = name
 		self.entity_rfidCode = rfidCode
-		self.broker_url = orion + "v2/entities"
+		self.broker_url = orion + "/v2/entities"
 		self.payload = {
 				"Worker": [
 					{
@@ -53,14 +54,24 @@ class Worker:
 					}
 				]
 		}
+		self.rfidSensor = rfidSensor
+		self.button = button
 
 	def provision(self):
 		url = self.broker_url
 		post(url,entities_headers,json.dumps(self.payload))
+		self.rfidSensor.provision()
+		self.button.provision()
+		self.init_script()
 
-	#def init_script
+	def init_script(self):
+		self.rfidSensor.send_data()
 
-	#def next_task
+	def next_task(self):
+		self.button.send_data()
+
+	def toString(self):
+		return "Worker: " + str(self.entity_id) + " - " + self.entity_rfidCode
 
 class Service:
 	def __init__(self, cbroker, apikey, entity_type, resource):
@@ -115,6 +126,9 @@ class Device:
 	def provision(self):
 		url = self.agent_url
 		post(url,iot_headers,json.dumps(self.payload))
+
+	def toString(self):
+		return "Device: " + self.entity_type + " - " + self.device_id
 
 class TempSensor(Device):
 	def __init__(self, id, protocol, apikey, ref):
@@ -222,7 +236,7 @@ class weightSensor (Device):
 				]
 			}
 
-class motionSensor (Device):
+class MotionSensor (Device):
 	def __init__(self, id, protocol, apikey, ref):
 		super().__init__("motionSensor"+str(id), "MotionSensor", "MotionSensor:"+str(id), protocol, apikey)
 		self.ref = ref
@@ -243,6 +257,49 @@ class motionSensor (Device):
 				]
 			}
 
+class RFIDSensor (Device):
+	def __init__(self, id, protocol, apikey, ref):
+		super().__init__("rfidSensor"+str(id), "RFIDSensor", "RFIDSensor:"+str(id), protocol, apikey)
+		self.ref = ref
+		self.payload = {
+			 "devices": [
+				 {
+					 "device_id":   self.device_id,
+					 "entity_name": self.entity_name,
+					 "entity_type": self.entity_type,
+					 "protocol":    self.protocol,
+					 "attributes": [
+							{ "object_id": "r", "name": "RFID", "type": "Integer" }
+						],
+						"static_attributes": [
+							{ "name":"refStation", "type": "Relationship", "value": self.ref}
+						]
+				}
+				]
+			}
+
+class Button (Device):
+	def __init__(self, id, protocol, apikey, ref):
+		super().__init__("button"+str(id), "Button", "Button:"+str(id), protocol, apikey)
+		self.ref = ref
+		self.payload = {
+			 "devices": [
+				 {
+					 "device_id":   self.device_id,
+					 "entity_name": self.entity_name,
+					 "entity_type": self.entity_type,
+					 "protocol":    self.protocol,
+					 "attributes": [
+							{ "object_id": "p", "name": "Press", "type": "Integer" }
+						],
+						"static_attributes": [
+							{ "name":"refStation", "type": "Relationship", "value": self.ref}
+						]
+				}
+				]
+			}
+
+
 def simulate_device(device, samples, stop):
 	sleeptime = float(1.0/samples)
 	print(sleeptime)
@@ -253,7 +310,20 @@ def simulate_device(device, samples, stop):
 		if stop():
 			break
 		i+=1
-		print(i)
+		#print(device.toString() + " " + str(i))
+		sleep(sleeptime)
+		pass
+
+def simulate_worker(worker, sample, stop):
+	sleeptime = float(60.0/sample)
+
+	i=0
+	while True:
+		worker.next_task()
+		if stop():
+			break
+		i+=1
+		print(worker.toString() + " " + str(i))
 		sleep(sleeptime)
 		pass
 
@@ -261,14 +331,21 @@ def read_conf_file(file):
 	run_time = 0
 	apikey = ""
 	devices = []
+	workers = []
 	sample = []
-	t=0;h=0;l=0;c=0
+	t=0;h=0;l=0;c=0;r=0;b=0;w=0
 
 	with open(file) as file_object:
 		line = file_object.readline()
 		while line:
 			x = line.split()
 			key = x[0]
+
+			if key == 'host':
+				host = x[1]
+
+			if key == 'cbroker':
+				cbroker = x[1]
 
 			if key == 'run_time':
 				run_time = int(x[1])
@@ -293,16 +370,25 @@ def read_conf_file(file):
 					t+=1
 				sample.append(int(x[5]))
 
+			if key == 'worker':
+				rfid_aux = RFIDSensor(r,x[1],apikey,x[4])
+				r+=1
+				button_aux = Button(b,x[1],apikey,x[4])
+				b+=1
+				workers.append(Worker(w,x[2],x[3],rfid_aux,button_aux))
+				w+=1
+				sample.append(int(x[5]))
+
 			line = file_object.readline()
 
 
-	return run_time,service,devices,sample
+	return run_time,service,devices,workers,sample
 
 
 def main():
 	run_time=0
 	#read from confg file ...
-	run_time,service,devices,sample=read_conf_file('DummyDevices.conf')
+	run_time,service,devices,workers,sample=read_conf_file('DummyDevices.conf')
 
 	service.provision()
 	
@@ -313,6 +399,12 @@ def main():
 	for d in devices:
 		d.provision()
 		threads.append(threading.Thread(target=simulate_device,args=(d,sample[i],lambda : stop_threads,)))
+		i+=1
+		pass
+
+	for w in workers:
+		w.provision()
+		threads.append(threading.Thread(target=simulate_worker,args=(w,sample[i],lambda : stop_threads,)))
 		i+=1
 		pass
 
