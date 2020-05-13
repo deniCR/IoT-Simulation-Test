@@ -14,50 +14,50 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 		"actionType":"APPEND",
 	  	"entities":[
 	        {
-			    "id": "urn:ngsi-ld:Estation:001","type": "Estation",
-			    "denomination": {"type": "Text","value": "Manofacture Estation"},
+			    "id": "urn:ngsi-ld:Station:001","type": "Station",
+			    "denomination": {"type": "Text","value": "Manofacture Station"},
 			    "productiviti": {"type": "Float","value": "0.0"},
 			    "temperature": {"type": "Property","value": "25"},
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
 			    "CO2": {"type": "Property","value": "600"},
 			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:001"},
-			    "refNextEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:002"}
+			    "refNextStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:002"}
 	        },
 	        {
-			    "id": "urn:ngsi-ld:Estation:002","type": "Estation",
-			    "denomination": {"type": "Text","value": "Manofacture Estation"},
+			    "id": "urn:ngsi-ld:Station:002","type": "Station",
+			    "denomination": {"type": "Text","value": "Manofacture Station"},
 			    "productiviti": {"type": "Float","value": "0.0"},
 			    "temperature": {"type": "Property","value": "25"},
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
 			    "CO2": {"type": "Property","value": "600"},
 			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:002"},
-			    "refPreviousEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:001"},
-			    "refNextEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:003"}
+			    "refPreviousStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:001"},
+			    "refNextStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:003"}
 	        },
 	        {
-			    "id": "urn:ngsi-ld:Estation:003","type": "Estation",
-			    "denomination": {"type": "Text","value": "Manofacture Estation"},
+			    "id": "urn:ngsi-ld:Station:003","type": "Station",
+			    "denomination": {"type": "Text","value": "Manofacture Station"},
 			    "productiviti": {"type": "Float","value": "0.0"},
 			    "temperature": {"type": "Property","value": "25"},
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
 			    "CO2": {"type": "Property","value": "600"},
 			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:003"},
-			    "refPreviousEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:002"},
-			    "refNextEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:004"}
+			    "refPreviousStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:002"},
+			    "refNextStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:004"}
 	        },
 	        {
-			    "id": "urn:ngsi-ld:Estation:004","type": "Estation",
-			    "denomination": {"type": "Text","value": "Manofacture Estation"},
+			    "id": "urn:ngsi-ld:Station:004","type": "Station",
+			    "denomination": {"type": "Text","value": "Manofacture Station"},
 			    "productiviti": {"type": "Float","value": "0.0"},
 			    "temperature": {"type": "Property","value": "25"},
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
 			    "CO2": {"type": "Property","value": "600"},
 			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:004"},
-			    "refPreviousEstation": {"type": "Relationship", "value":"urn:ngsi-ld:Estation:003"},
+			    "refPreviousStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:003"},
 	        },
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:001",
@@ -257,6 +257,5 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/subscriptions/' \
 	    	"http": {
 	      		"url": "http://draco:5050/v2/notify"
 	    	}
-	  	},
-	  	"throttling": 5
+	  	}
 	}'

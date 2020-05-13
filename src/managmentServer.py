@@ -9,21 +9,23 @@ url = "http://orion:1026/v2/subscriptions/"
 payload = {
 	"description": "Notify Server of all RFID context changes",
 	"subject": { 
-		"entities": [
-	    	{ "idPattern": ".*", "type": "RFIDSensor"} 
-	    	]
+		"entities": [{"idPattern": ".*", "type": "RFIDSensor"}],
+		"watchAttributes": ["RFID"],
+		"q": "RFID!=\"\""
 	},
 	"notification": {
 		"http": {
-			"url": "http://managment:40000" 
-        }
+			"url": "http://managment:40000",
+			"accept": "application/json"
+        },
+        "attributes": ["RFID","refStation"],
+        "attrsFormat": "keyValues"
 	},
-	"throttling": 5
 }
 headers = {
-  'Content-Type': 'application/json',
-  'fiware-service': 'openiot',
-  'fiware-servicepath': '/'
+  	'fiware-service': 'openiot',
+  	'fiware-servicepath': '/',
+	'Content-Type': 'application/json'
 }
 
 lastrequest=""
@@ -48,11 +50,10 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        #self.wfile.write(b'Hello, world!')
         self.wfile.write(lastrequest.encode('utf8'))
 
     def do_POST(self):
-        print("Notification recived!!!", flush=True)
+        print("Notification recived!!!\n", flush=True)
         content_length = int(self.headers['Content-Length'])
         body = self.rfile.read(content_length)
         self.send_response(200)
@@ -62,11 +63,15 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         response.write(b'This is POST request. ')
         response.write(b'Received: ')
         response.write(body)
-        print(body, flush=True)
+        json_text = body.decode('utf8')
+        print(json.dumps(json_text,indent=2), flush=True)
         lastrequest=body
         self.wfile.write(response.getvalue())
 
 def main():
+	#print(json.dumps(headers, indent=2))
+	#print(json.dumps(payload, indent=2))
+
 	post(url,headers,json.dumps(payload))
 	print("Start server ...", flush=True)
 	httpd = HTTPServer(("", 40000), SimpleHTTPRequestHandler)
