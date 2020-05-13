@@ -15,8 +15,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 	  	"entities":[
 	        {
 			    "id": "urn:ngsi-ld:Station:001","type": "Station",
-			    "denomination": {"type": "Text","value": "Manofacture Station"},
-			    "productiviti": {"type": "Float","value": "0.0"},
+			    "denomination": {"type": "Text","value": "Manufacturing Station"},
+			    "productivity": {"type": "Float","value": "0.0"},
 			    "temperature": {"type": "Property","value": "25"},
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
@@ -26,8 +26,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 	        },
 	        {
 			    "id": "urn:ngsi-ld:Station:002","type": "Station",
-			    "denomination": {"type": "Text","value": "Manofacture Station"},
-			    "productiviti": {"type": "Float","value": "0.0"},
+			    "denomination": {"type": "Text","value": "Manufacture Station"},
+			    "productivity": {"type": "Float","value": "0.0"},
 			    "temperature": {"type": "Property","value": "25"},
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
@@ -38,8 +38,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 	        },
 	        {
 			    "id": "urn:ngsi-ld:Station:003","type": "Station",
-			    "denomination": {"type": "Text","value": "Manofacture Station"},
-			    "productiviti": {"type": "Float","value": "0.0"},
+			    "denomination": {"type": "Text","value": "Manufacturing Station"},
+			    "productivity": {"type": "Float","value": "0.0"},
 			    "temperature": {"type": "Property","value": "25"},
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
@@ -50,8 +50,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 	        },
 	        {
 			    "id": "urn:ngsi-ld:Station:004","type": "Station",
-			    "denomination": {"type": "Text","value": "Manofacture Station"},
-			    "productiviti": {"type": "Float","value": "0.0"},
+			    "denomination": {"type": "Text","value": "Manufacturing Station"},
+			    "productivity": {"type": "Float","value": "0.0"},
 			    "temperature": {"type": "Property","value": "25"},
 			    "humidity": {"type": "Property","value": "70"},
 			    "luminosity": {"type": "Property","value": "650"},
@@ -61,32 +61,32 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 	        },
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:001",
-			    "processState": {"type": "Integer","value": "0"},
-			    "productiviti": {"type": "Fload","value": "0.0"},
+			    "processState": {"type": "Text","value": "Stopped"},
+			    "productivity": {"type": "Float","value": "0.0"},
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Script B001"}
 			},
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:002",
-			    "processState": {"type": "Integer","value": "0"},
-			    "productiviti": {"type": "Fload","value": "0.0"},
+			    "processState": {"type": "Text","value": "Stopped"},
+			    "productivity": {"type": "Float","value": "0.0"},
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Script B002"}
 			},
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:003",
-			    "processState": {"type": "Integer","value": "0"},
-			    "productiviti": {"type": "Fload","value": "0.0"},
+			    "processState": {"type": "Text","value": "Stopped"},
+			    "productivity": {"type": "Float","value": "0.0"},
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Script B003"}
 			},
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:004",
-			    "processState": {"type": "Integer","value": "0"},
-			    "productiviti": {"type": "Fload","value": "0.0"},
+			    "processState": {"type": "Text","value": "Stopped"},
+			    "productivity": {"type": "Float","value": "0.0"},
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
 			    "name": {"type": "Text","value": "Script B004"}
