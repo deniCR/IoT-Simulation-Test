@@ -66,7 +66,9 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": ""},
 			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Script B001"}
+			    "name": {"type": "Text","value": "Script B001"},
+			    "firstTask": {"type": "Relationship", "value": "urn:ngsi-ld:Task:001"},
+			    "currentTask": {"type": "Relationship", "value": ""}
 			},
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:002",
@@ -75,7 +77,9 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": ""},
 			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Script B002"}
+			    "name": {"type": "Text","value": "Script B002"},
+			    "firstTask": {"type": "Relationship", "value": "urn:ngsi-ld:Task:007"},
+			    "currentTask": {"type": "Relationship", "value": ""}
 			},
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:003",
@@ -84,7 +88,9 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": ""},
 			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Script B003"}
+			    "name": {"type": "Text","value": "Script B003"},
+			    "firstTask": {"type": "Relationship", "value": "urn:ngsi-ld:Task:013"},
+			    "currentTask": {"type": "Relationship", "value": ""}
 			},
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:004",
@@ -93,7 +99,9 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "assemblyTime": {"type": "Integer","value": "60"},
 			    "startTime": {"type": "DataTime","value": ""},
 			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Script B004"}
+			    "name": {"type": "Text","value": "Script B004"},
+			    "firstTask": {"type": "Relationship", "value": ""},
+			    "currentTask": {"type": "Relationship", "value": ""}
 			},
 			{
 				"type": "Requirements","id": "urn:ngsi-ld:Requirements:001"
@@ -134,6 +142,10 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			{
 				"type": "Requirements","id": "urn:ngsi-ld:Requirements:013"
 			},
+			{
+				"type": "Requirements","id": "urn:ngsi-ld:Requirements:014"
+			},
+
 			{
 				"type": "Task","id": "urn:ngsi-ld:Task:001",
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
@@ -246,7 +258,16 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 				"type": "Task","id": "urn:ngsi-ld:Task:013",
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:003"},
 			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:0013"},
+			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:013"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
+			    "name": {"type": "Text","value": "Assembly task"}
+			},
+			{
+				"type": "Task","id": "urn:ngsi-ld:Task:014",
+			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:004"},
+			    "assemblyTime": {"type": "Float","value": "10"},
+			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:014"},
 			    "startTime": {"type": "DataTime","value": ""},
 			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
