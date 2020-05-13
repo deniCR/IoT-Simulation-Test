@@ -57,7 +57,7 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "luminosity": {"type": "Property","value": "650"},
 			    "CO2": {"type": "Property","value": "600"},
 			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:004"},
-			    "refPreviousStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:003"},
+			    "refPreviousStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:003"}
 	        },
 			{
 				"type": "Script","id": "urn:ngsi-ld:Script:001",
