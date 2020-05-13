@@ -64,7 +64,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "processState": {"type": "Text","value": "Stopped"},
 			    "productivity": {"type": "Float","value": "0.0"},
 			    "assemblyTime": {"type": "Integer","value": "60"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Script B001"}
 			},
 			{
@@ -72,7 +73,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "processState": {"type": "Text","value": "Stopped"},
 			    "productivity": {"type": "Float","value": "0.0"},
 			    "assemblyTime": {"type": "Integer","value": "60"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Script B002"}
 			},
 			{
@@ -80,7 +82,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "processState": {"type": "Text","value": "Stopped"},
 			    "productivity": {"type": "Float","value": "0.0"},
 			    "assemblyTime": {"type": "Integer","value": "60"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Script B003"}
 			},
 			{
@@ -88,7 +91,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "processState": {"type": "Text","value": "Stopped"},
 			    "productivity": {"type": "Float","value": "0.0"},
 			    "assemblyTime": {"type": "Integer","value": "60"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Script B004"}
 			},
 			{
@@ -135,7 +139,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:001"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -143,7 +148,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:002"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -151,7 +157,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:003"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -159,7 +166,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:004"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -167,7 +175,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:005"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}	
 			},
 			{
@@ -175,7 +184,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:006"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -183,7 +193,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:007"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}	
 			},
 			{
@@ -191,7 +202,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:008"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -199,7 +211,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:009"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}	
 			},
 			{
@@ -207,7 +220,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:010"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -215,7 +229,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:011"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -223,7 +238,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:012"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			},
 			{
@@ -231,7 +247,8 @@ curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
 			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:003"},
 			    "assemblyTime": {"type": "Float","value": "10"},
 			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:0013"},
-			    "startTime": {"type": "DataTime","value": "2020-05-01T12:00:00Z"},
+			    "startTime": {"type": "DataTime","value": ""},
+			    "endTime": {"type": "DataTime","value": ""},
 			    "name": {"type": "Text","value": "Assembly task"}
 			}
 	  ]
