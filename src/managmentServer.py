@@ -30,6 +30,29 @@ headers = {
 
 lastrequest=""
 
+def get(url,headers,payload):
+	try:
+		response = requests.request("GET", url, headers=headers, data = payload)
+		#response.raise_for_status()
+		return response.text
+	except requests.exceptions.HTTPError as errh:
+			print ("Http Error:",errh)
+	except requests.exceptions.ConnectionError as errc:
+			print ("Error Connecting:",errc)
+	except requests.exceptions.Timeout as errt:
+			print ("Timeout Error:",errt)
+	except requests.exceptions.RequestException as err:
+			print ("OOps: Something Else",err)
+
+def wait4Service():
+	url_services = "http://iot-agent:4041/iot/services"
+	payload_service = {}
+	count = 0
+	while count==0:
+		response = get(url_services,headers,json.dumps(payload_service))
+		response_json = json.loads(response)
+		count = int(response_json["count"])
+
 def post(url,headers,payload):
 	try:
 		response = requests.request("POST", url, headers=headers, data = payload)
@@ -71,7 +94,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 def main():
 	#print(json.dumps(headers, indent=2))
 	#print(json.dumps(payload, indent=2))
-
+	wait4Service()
 	post(url,headers,json.dumps(payload))
 	print("Start server ...", flush=True)
 	httpd = HTTPServer(("", 40000), SimpleHTTPRequestHandler)
