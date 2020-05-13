@@ -280,6 +280,12 @@ class RFIDSensor (Device):
 				]
 			}
 
+	def send_data(self):
+		url=agent_reciver+"/d?k="+self.apikey+"&i="+self.device_id
+		data = int(random.random()*100)
+		payload="r|"+"fshuidaohfeiuhqw"+str(data)
+		post(url,ul_headers,payload)
+
 class Button (Device):
 	def __init__(self, id, protocol, apikey, ref):
 		super().__init__("button"+str(id), "Button", "Button:"+str(id), protocol, apikey)
