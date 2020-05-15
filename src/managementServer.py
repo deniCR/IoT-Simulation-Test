@@ -16,7 +16,7 @@ rfid_subscription = {
 	},
 	"notification": {
 		"http": {
-			"url": "http://managment:40000/notify/RFID",
+			"url": "http://management:40000/notify/RFID",
 			"accept": "application/json"
         },
         "attributes": ["RFID","refStation"],
@@ -119,7 +119,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        print("Notification recived!!!\n", flush=True)
+        print("Notification received!!!\n", flush=True)
 
         content_length = int(self.headers['Content-Length'])
         body = self.rfile.read(content_length)
