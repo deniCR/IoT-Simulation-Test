@@ -250,7 +250,9 @@ class MotionSensor (Device):
 					 "entity_type": self.entity_type,
 					 "protocol":    self.protocol,
 					 "attributes": [
-							{ "object_id": "m", "name": "Motion", "type": "Integer" }
+							{ "object_id": "m", "name": "Motion", "type": "Integer" },
+							{ "object_id": "t", "name": "Time", "type": "DataTime"}
+
 						],
 						"static_attributes": [
 							{ "name":"refRequirement", "type": "Relationship", "value": self.ref}
@@ -271,7 +273,9 @@ class RFIDSensor (Device):
 					 "entity_type": self.entity_type,
 					 "protocol":    self.protocol,
 					 "attributes": [
-							{ "object_id": "r", "name": "RFID", "type": "Integer" }
+							{ "object_id": "r", "name": "RFID", "type": "Integer" },
+							{ "object_id": "t", "name": "Time", "type": "DataTime"}
+
 						],
 						"static_attributes": [
 							{ "name":"refStation", "type": "Relationship", "value": self.ref}
@@ -298,7 +302,8 @@ class Button (Device):
 					 "entity_type": self.entity_type,
 					 "protocol":    self.protocol,
 					 "attributes": [
-							{ "object_id": "p", "name": "Press", "type": "Integer" }
+							{ "object_id": "p", "name": "Press", "type": "Integer" },
+							{ "object_id": "t", "name": "Time", "type": "DataTime"}
 						],
 						"static_attributes": [
 							{ "name":"refStation", "type": "Relationship", "value": self.ref}
