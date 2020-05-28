@@ -5,21 +5,73 @@ import json
 from time import sleep
 import threading
 import random
+from io import BytesIO
+from termcolor import colored
 
-import Classes.HTTPCommands
-import Classes.Devices
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
-def wait4Service():
-	url_services = "http://iot-agent:4041/iot/services/?service=openiot"
-	payload_service = {}
-	count = 0
-	while count==0:
-		response = get(url_services,headers,json.dumps(payload_service))
-		response_json = json.loads(response)
-		count = int(response_json["count"])
-		if count==0:
-			sleep(1)
-			pass
+import Classes.Devices as Devices
+import Classes.Entities as Entities
+
+url = "http://localhost:1026/v2/subscriptions/"
+payload = {
+	"description": "Notify Server of all RFID context changes",
+	"subject": { 
+		"entities": [
+			{ "idPattern": ".*" , "type": "RFIDSensor"} 
+			] 
+	},
+	"notification": {
+		"http": {
+			"url": "http://localhost:8001" }
+	}
+}
+headers = {
+  'Content-Type': 'application/json'
+}
+
+actuators = {}
+
+def execCommand(json_mensage):
+	msg = json_mensage.split("@")
+	device = actuators[msg[0]]
+	#print(msg[1])
+	commands = msg[1].split("|")
+	for c in commands:
+		device.execCommand(c)
+		pass
+
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()		
+
+    def do_POST(self):
+        print(colored("\nNotification received!!!","green"), flush=True)
+
+        content_length = int(self.headers['Content-Length'])
+        body = self.rfile.read(content_length)
+
+        self.send_response(200)
+        self.end_headers()
+
+        response = BytesIO()
+        response.write(b'This is POST request. ')
+        response.write(b'Received: ')
+        response.write(body)
+        self.wfile.write(response.getvalue())
+
+        json_text = body.decode('utf8')
+        #print(json.dumps(json_text,indent=2), flush=True)
+
+        if self.path > '/iot/':
+        	path = self.path.split("/")
+        	#print("Path: " + path[1] + " " + path[2])
+        	if path[2] > '':
+        		execCommand(json_text)
+        		#threading.Thread(target=execCommand, args=(json_text,))
+        	pass
 
 def simulate_device(device, samples, stop):
 	sleeptime = float(1.0/samples)
@@ -38,6 +90,11 @@ def simulate_device(device, samples, stop):
 def simulate_worker(worker, sample, stop):
 	sleeptime = float(60.0/sample)
 
+	worker.provision()
+
+	#Init Script
+	worker.init_script()
+
 	i=0
 	while True:
 		worker.next_task()
@@ -45,8 +102,16 @@ def simulate_worker(worker, sample, stop):
 			break
 		i+=1
 		print(worker.toString() + " " + str(i))
-		sleep(sleeptime)
+		sleep_for = random.random()*sleeptime
+		if sleep_for < 1:
+			sleep_for = 1
+		print("Sleep for :" + str(sleep_for))
+		sleep(sleep_for)
 		pass
+
+def serverStart():
+	httpd = HTTPServer(("192.168.2.151", 40001), SimpleHTTPRequestHandler)
+	httpd.serve_forever()
 
 def read_conf_file(file):
 	run_time = 0
@@ -72,42 +137,51 @@ def read_conf_file(file):
 				run_time = int(x[1])
 
 			if key == 'service':
-				service = Classes.Devices.Service(x[1],x[2],x[3],x[4])
+				service = Entities.Service(x[1],x[2],x[3],x[4])
 				apikey = x[2]
 
 			if key == 'device':
 				type = x[1]
 				if type == 't':
-					devices.append(Classes.Devices.TempSensor(t,x[2],apikey,x[3]))
+					devices.append(Devices.TempSensor(t,x[2],apikey,x[3]))
 					t+=1
 				if type == 'h':
-					devices.append(Classes.Devices.HumSensor(h,x[2],apikey,x[3]))
+					devices.append(Devices.HumSensor(h,x[2],apikey,x[3]))
 					h+=1
 				if type == 'l':
-					devices.append(Classes.Devices.LightSensor(l,x[2],apikey,x[3]))
+					devices.append(Devices.LightSensor(l,x[2],apikey,x[3]))
 					l+=1
 				if type == 'c':
-					devices.append(Classes.Devices.CO2Sensor(t,x[2],apikey,x[3]))
+					devices.append(Devices.CO2Sensor(t,x[2],apikey,x[3]))
 					t+=1
-				if type == 'led':
-					devices.append(Classes.Devices.Led(led,x[2],apikey,x[3]))
-					led+=1
 				sample.append(int(x[5]))
 
+			#if key == 'actuator':
+			#	type = x[1]
+			#	if type == 'led':
+			#		led_device = Devices.Led(led,x[2],apikey,x[3])
+			#		#devices.append(led_device)
+			#		actuators["led"+str(led)]=(led_device)
+			#		led+=1
+			#	sample.append(int(x[5]))
+
 			if key == 'worker':
-				rfid_aux = Classes.Devices.RFIDSensor(r,x[1],apikey,x[4])
+				rfid_aux = Devices.RFIDSensor(r,x[1],apikey,x[4])
 				r+=1
-				button_aux = Classes.Devices.Button(b,x[1],apikey,x[4])
+				button_aux = Devices.Button(b,x[1],apikey,x[4])
 				b+=1
-				workers.append(Classes.Devices.Worker(w,x[2],x[3],rfid_aux,button_aux))
+				led_aux = Devices.Led(led,x[1],apikey,x[4])
+				actuators["led"+str(led)]=(led_aux)
+				led+=1
+				workers.append(Entities.Worker(w,x[2],x[3],rfid_aux,button_aux,led_aux))
 				w+=1
 				sample.append(int(x[5]))
 
+			#print(line + "\n" + str(w) + "\n")
 			line = file_object.readline()
 
 
 	return run_time,service,devices,workers,sample
-
 
 def main():
 	run_time=0
@@ -124,17 +198,17 @@ def main():
 		d.provision()
 		threads.append(threading.Thread(target=simulate_device,args=(d,sample[i],lambda : stop_threads,)))
 		i+=1
-		pass
 
 	for w in workers:
-		w.provision()
 		threads.append(threading.Thread(target=simulate_worker,args=(w,sample[i],lambda : stop_threads,)))
 		i+=1
-		pass
+
+	#threads.append(threading.Thread(target=serverStart,args=()))
 
 	for t in threads:
 		t.start()
-		pass
+
+	serverStart()
 
 	#The threads will run until the time is completed...
 	sleep(run_time)
@@ -142,7 +216,6 @@ def main():
 
 	for t in threads:
 		t.join()
-		pass
 
 if __name__ == "__main__":
 		main()
