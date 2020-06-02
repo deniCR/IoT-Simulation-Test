@@ -13,29 +13,56 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import Classes.Devices as Devices
 import Classes.Entities as Entities
 
-url = "http://localhost:1026/v2/subscriptions/"
-payload = {
-	"description": "Notify Server of all RFID context changes",
-	"subject": { 
-		"entities": [
-			{ "idPattern": ".*" , "type": "RFIDSensor"} 
-			] 
-	},
-	"notification": {
-		"http": {
-			"url": "http://localhost:8001" }
-	}
-}
-headers = {
-  'Content-Type': 'application/json'
-}
+actuator_host_ip = "192.168.2.151"
+actuator_host_port = 40001
 
 actuators = {}
+
+#class Terminal
+class Terminal():
+	def __init__(self,worker, rfidSensor, button, led):
+		self.worker = worker
+		#Sensors
+		self.rfidSensor = rfidSensor
+		self.button = button
+		self.led = led
+
+	def provision(self):
+		self.worker.provision()
+		#Sensors provision
+		self.rfidSensor.provision()
+		self.button.provision()
+		self.led.provision()
+		self.led.sendData()
+
+	#Function of initialization
+	def init_script(self):
+		self.rfidSensor.sendData(self.worker.getRFIDCode())
+
+		#Wait until led changes color - Off, Red or Green
+		while self.led.color=='None':
+			sleep(1)
+
+		#The command has been received 
+		self.led.execCommand("Off")
+
+	#Command to indicate the end of the current task
+	def nextTask(self):
+		self.button.nextTask()
+		#Wait until led changes color - Off, Red or Green
+		while self.led.color=='None':
+			sleep(0.25)
+			pass
+
+		#The command has been received 
+		self.led.execCommand("Off")
+
+	def toString(self):
+		return self.worker.toString()
 
 def execCommand(json_mensage):
 	msg = json_mensage.split("@")
 	device = actuators[msg[0]]
-	#print(msg[1])
 	commands = msg[1].split("|")
 	for c in commands:
 		device.execCommand(c)
@@ -63,45 +90,44 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(response.getvalue())
 
         json_text = body.decode('utf8')
-        #print(json.dumps(json_text,indent=2), flush=True)
 
         if self.path > '/iot/':
         	path = self.path.split("/")
-        	#print("Path: " + path[1] + " " + path[2])
         	if path[2] > '':
         		execCommand(json_text)
         		#threading.Thread(target=execCommand, args=(json_text,))
         	pass
 
-def simulate_device(device, samples, stop):
+def serverStart():
+	httpd = HTTPServer((actuator_host_ip, actuator_host_port), SimpleHTTPRequestHandler)
+	httpd.serve_forever()
+
+def simulateDevice(device, samples, stop):
 	sleeptime = float(1.0/samples)
 	print(sleeptime)
 
 	i=0
 	while True:
-		device.send_data()
+		device.sendData()
 		if stop():
 			break
 		i+=1
-		#print(device.toString() + " " + str(i))
 		sleep(sleeptime)
 		pass
 
-def simulate_worker(worker, sample, stop):
+def simulateTerminal(terminal, sample, stop):
 	sleeptime = float(60.0/sample)
 
-	worker.provision()
-
-	#Init Script
-	worker.init_script()
+	terminal.provision()
+	terminal.initScript()
 
 	i=0
 	while True:
-		worker.next_task()
+		terminal.nextTask()
 		if stop():
 			break
 		i+=1
-		print(worker.toString() + " " + str(i))
+		print(terminal.toString() + " " + str(i))
 		sleep_for = random.random()*sleeptime
 		if sleep_for < 1:
 			sleep_for = 1
@@ -109,15 +135,11 @@ def simulate_worker(worker, sample, stop):
 		sleep(sleep_for)
 		pass
 
-def serverStart():
-	httpd = HTTPServer(("192.168.2.151", 40001), SimpleHTTPRequestHandler)
-	httpd.serve_forever()
-
-def read_conf_file(file):
+def readConfFile(file):
 	run_time = 0
 	apikey = ""
 	devices = []
-	workers = []
+	terminals = []
 	sample = []
 	t=0;h=0;l=0;c=0;r=0;b=0;w=0;led=0
 
@@ -173,7 +195,8 @@ def read_conf_file(file):
 				led_aux = Devices.Led(led,x[1],apikey,x[4])
 				actuators["led"+str(led)]=(led_aux)
 				led+=1
-				workers.append(Entities.Worker(w,x[2],x[3],rfid_aux,button_aux,led_aux))
+				worker_aux = Entities.Worker(w,x[2],x[3])
+				terminals.append(Terminal(worker_aux,rfid_aux,button_aux,led_aux))
 				w+=1
 				sample.append(int(x[5]))
 
@@ -181,12 +204,12 @@ def read_conf_file(file):
 			line = file_object.readline()
 
 
-	return run_time,service,devices,workers,sample
+	return run_time,service,devices,terminals,sample
 
 def main():
 	run_time=0
 	#read from confg file ...
-	run_time,service,devices,workers,sample=read_conf_file('DummyDevices.conf')
+	run_time,service,devices,terminals,sample=readConfFile('DummyDevices.conf')
 
 	service.provision()
 	
@@ -196,14 +219,12 @@ def main():
 	i=0
 	for d in devices:
 		d.provision()
-		threads.append(threading.Thread(target=simulate_device,args=(d,sample[i],lambda : stop_threads,)))
+		threads.append(threading.Thread(target=simulateDevice,args=(d,sample[i],lambda : stop_threads,)))
 		i+=1
 
-	for w in workers:
-		threads.append(threading.Thread(target=simulate_worker,args=(w,sample[i],lambda : stop_threads,)))
+	for t in terminals:
+		threads.append(threading.Thread(target=simulateTerminal,args=(t,sample[i],lambda : stop_threads,)))
 		i+=1
-
-	#threads.append(threading.Thread(target=serverStart,args=()))
 
 	for t in threads:
 		t.start()
