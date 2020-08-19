@@ -1,299 +1,60 @@
 #!/bin/bash
 # 
-#  curl commands to reload the data from the previous tutorial
-#
+#  curl commands
 #
 
 set -e
 
-printf "⏳  Loading context data "
+printf "\n⏳   Loading order subscriptions \n"
 
-curl -s -o /dev/null -X POST 'http://orion:1026/v2/op/update' \
-  	-H 'Content-Type: application/json' \
-	--data-raw '{
-		"actionType":"APPEND",
-	  	"entities":[
-	        {
-			    "id": "urn:ngsi-ld:Station:001","type": "Station",
-			    "denomination": {"type": "Text","value": "Manufacturing Station"},
-			    "productivity": {"type": "Float","value": "0.0"},
-			    "temperature": {"type": "Property","value": "25"},
-			    "humidity": {"type": "Property","value": "70"},
-			    "luminosity": {"type": "Property","value": "650"},
-			    "CO2": {"type": "Property","value": "600"},
-			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:001"},
-			    "refNextStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:002"}
-	        },
-	        {
-			    "id": "urn:ngsi-ld:Station:002","type": "Station",
-			    "denomination": {"type": "Text","value": "Manufacture Station"},
-			    "productivity": {"type": "Float","value": "0.0"},
-			    "temperature": {"type": "Property","value": "25"},
-			    "humidity": {"type": "Property","value": "70"},
-			    "luminosity": {"type": "Property","value": "650"},
-			    "CO2": {"type": "Property","value": "600"},
-			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:002"},
-			    "refPreviousStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:001"},
-			    "refNextStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:003"}
-	        },
-	        {
-			    "id": "urn:ngsi-ld:Station:003","type": "Station",
-			    "denomination": {"type": "Text","value": "Manufacturing Station"},
-			    "productivity": {"type": "Float","value": "0.0"},
-			    "temperature": {"type": "Property","value": "25"},
-			    "humidity": {"type": "Property","value": "70"},
-			    "luminosity": {"type": "Property","value": "650"},
-			    "CO2": {"type": "Property","value": "600"},
-			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:003"},
-			    "refPreviousStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:002"},
-			    "refNextStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:004"}
-	        },
-	        {
-			    "id": "urn:ngsi-ld:Station:004","type": "Station",
-			    "denomination": {"type": "Text","value": "Manufacturing Station"},
-			    "productivity": {"type": "Float","value": "0.0"},
-			    "temperature": {"type": "Property","value": "25"},
-			    "humidity": {"type": "Property","value": "70"},
-			    "luminosity": {"type": "Property","value": "650"},
-			    "CO2": {"type": "Property","value": "600"},
-			    "refScript": {"type": "Relationship", "value":"urn:ngsi-ld:Script:004"},
-			    "refPreviousStation": {"type": "Relationship", "value":"urn:ngsi-ld:Station:003"}
-	        },
-			{
-				"type": "Script","id": "urn:ngsi-ld:Script:001",
-			    "processState": {"type": "Text","value": "Stopped"},
-			    "productivity": {"type": "Float","value": "0.0"},
-			    "assemblyTime": {"type": "Integer","value": "60"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Script B001"},
-			    "firstTask": {"type": "Relationship", "value": "urn:ngsi-ld:Task:001"},
-			    "currentTask": {"type": "Relationship", "value": ""}
-			},
-			{
-				"type": "Script","id": "urn:ngsi-ld:Script:002",
-			    "processState": {"type": "Text","value": "Stopped"},
-			    "productivity": {"type": "Float","value": "0.0"},
-			    "assemblyTime": {"type": "Integer","value": "60"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Script B002"},
-			    "firstTask": {"type": "Relationship", "value": "urn:ngsi-ld:Task:007"},
-			    "currentTask": {"type": "Relationship", "value": ""}
-			},
-			{
-				"type": "Script","id": "urn:ngsi-ld:Script:003",
-			    "processState": {"type": "Text","value": "Stopped"},
-			    "productivity": {"type": "Float","value": "0.0"},
-			    "assemblyTime": {"type": "Integer","value": "60"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Script B003"},
-			    "firstTask": {"type": "Relationship", "value": "urn:ngsi-ld:Task:013"},
-			    "currentTask": {"type": "Relationship", "value": ""}
-			},
-			{
-				"type": "Script","id": "urn:ngsi-ld:Script:004",
-			    "processState": {"type": "Text","value": "Stopped"},
-			    "productivity": {"type": "Float","value": "0.0"},
-			    "assemblyTime": {"type": "Integer","value": "60"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Script B004"},
-			    "firstTask": {"type": "Relationship", "value": ""},
-			    "currentTask": {"type": "Relationship", "value": ""}
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:001"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:002"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:003"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:004"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:005"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:006"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:007"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:008"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:009"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:010"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:011"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:012"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:013"
-			},
-			{
-				"type": "Requirements","id": "urn:ngsi-ld:Requirements:014"
-			},
-
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:001",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:001"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:002",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:002"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:003",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:003"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:004",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:004"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:005",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:005"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}	
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:006",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:001"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:006"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:007",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:007"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}	
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:008",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:008"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:009",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:009"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}	
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:010",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:010"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:011",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:011"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:012",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:002"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:012"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:013",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:003"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:013"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			},
-			{
-				"type": "Task","id": "urn:ngsi-ld:Task:014",
-			    "refScript": {"type": "Relationship","value": "urn:ngsi-ld:Script:004"},
-			    "assemblyTime": {"type": "Float","value": "10"},
-			    "refRequirements":{"type": "Relationship","value": "urn:ngsi-ld:Requirements:014"},
-			    "startTime": {"type": "DataTime","value": ""},
-			    "endTime": {"type": "DataTime","value": ""},
-			    "name": {"type": "Text","value": "Assembly task"}
-			}
-	  ]
-	}'
-
-#The data that is "sent" can be filtered through the variables fiware-* and by the value idPattern 
-
-curl -s -o /dev/null -X POST 'http://orion:1026/v2/subscriptions/' \
+curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	-H 'Content-Type: application/json' \
 	-H 'fiware-service: openiot' \
 	-H 'fiware-servicepath: /' \
-	-H 'Content-Type: text/plain' \
 	--data-raw '{
-	  	"description": "Notify Draco of all context changes",
-	  	"subject": {
-	    	"entities": [
-	     		{
-	        		"idPattern": ".*"
-	      		}
-	    	]
-	  	},
-	  	"notification": {
-	    	"http": {
-	      		"url": "http://draco:5050/v2/notify"
-	    	}
-	  	}
+		"description": "Notify QuantumLeap of all Motion Sensor count changes",
+		"subject": {"entities": [{"idPattern": "Order.*"}]},
+		"notification": {
+			"http": {"url": "http://quantumleap:8668/v2/notify"},
+			"attrs": ["refPart","shopOrder","orderStatus","currentOperation","planedHours","actualHours","scheduledStart","scheduledEnd","actualStart","actualEnd","progress","scheduledDelay","progressDelay","actualStart","actualEnd"]
+		}
+	}'
+
+curl -X POST 'http://orion:1026/v2/subscriptions/' \
+	-H 'Content-Type: application/json' \
+	-H 'fiware-service: openiot' \
+	-H 'fiware-servicepath: /' \
+	--data-raw '{
+		"description": "Notify QuantumLeap of all Motion Sensor count changes",
+		"subject": {"entities": [{"idPattern": "Part.*"}]},
+		"notification": {
+			"http": {"url": "http://quantumleap:8668/v2/notify"},
+			"attrs": ["partNumber","serialNumber","partRev","cemb","planedHours","description"]
+		}
+	}'
+
+curl -X POST 'http://orion:1026/v2/subscriptions/' \
+	-H 'Content-Type: application/json' \
+	-H 'fiware-service: openiot' \
+	-H 'fiware-servicepath: /' \
+	--data-raw '{
+		"description": "Notify QuantumLeap of all Motion Sensor count changes",
+		"subject": {"entities": [{"idPattern": "WorkCenter.*"}]},
+		"notification": {
+			"http": {"url": "http://quantumleap:8668/v2/notify"}
+			"attrs": ["name","description"]
+		}
+	}'
+
+curl -X POST 'http://orion:1026/v2/subscriptions/' \
+	-H 'Content-Type: application/json' \
+	-H 'fiware-service: openiot' \
+	-H 'fiware-servicepath: /' \
+	--data-raw '{
+		"description": "Notify QuantumLeap of all Motion Sensor count changes",
+		"subject": {"entities": [{"idPattern": "Operation.*"}]},
+		"notification": {
+				"http": {"url": "http://quantumleap:8668/v2/notify"},
+				"attrs": ["workCenter_id","order_id","operationNumber","planedHours","operationStatus","fristRunDate","completeRunDate","setUpMan","manPowerHours","setUpMachine","machineHours","description"]
+	  }
 	}'

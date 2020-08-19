@@ -1,11 +1,86 @@
 import json
 from time import sleep
 from termcolor import colored
-import datetime
+from datetime import datetime, timedelta
 
 from . import HTTPCommands as HTTP
 
+import Classes.DB_Entities as DB_Entities
+
+import psycopg2
+
 Null = "Null"
+DateTimeFormat = "%Y-%m-%dT%H:%M:%S.00Z"
+Null_Time = datetime.strptime("1900-01-01T12:00:00.00Z", DateTimeFormat)
+
+#Leitura a partir de um ficheiro de configuração...
+conn = psycopg2.connect("dbname=MES-DB user=postgres host=192.168.2.108 port=5432")
+
+def getRunningOrders():
+	query = HTTP.entities_url + "/?q=orderNewStatus!='COMPLETE';orderNewStatus!='CANCELLED'&type=Order&options=keyValues&attrs=id,orderNumber,statusChangeTS&limit=1000"
+
+	response = HTTP.sendRequest("GET",query,HTTP.headers_get_iot)
+
+	json_entity = {}
+	if response != None:
+		json_entity = json.loads(response)
+
+	orderList = {}
+	for o in json_entity:
+		order = Order()
+		order.loadJsonEntity(o)
+		orderList.update({order.getOrderID(): (order)})
+
+	string = None
+
+	if len(orderList) > 0:
+		string = "("
+
+		for o in orderList:
+			string = string + "'" + o + "', "
+
+		string = string[:-2] + ")"
+
+	return orderList,string
+
+#Pode não ser necessário colletar todas as operações ... Pode ser feito para cada order ... ???
+def getRunningOperations():
+	query = HTTP.entities_url + "/?q=operationNewStatus!='COMPLETE';operationNewStatus!='CANCELLED'&type=Operation&options=keyValues&limit=1000"
+
+	response = HTTP.sendRequest("GET",query,HTTP.headers_get_iot)
+
+	json_entity = {}
+	if response != None:
+		json_entity = json.loads(response)
+
+	operationList = {}
+	for o in json_entity:
+		operation = Operation()
+		operation.loadJsonEntity(o)
+		orderNumber = operation.getOrderNumber()
+		operationNumber = operation.getOperationID()
+
+		if not orderNumber in operationList:
+			operationList.update({orderNumber: {}})
+
+		if not (operationNumber in operationList[orderNumber]) or operation.getTimeStamp() > operationList[orderNumber][operationNumber].getTimeStamp():
+			operationList[orderNumber].update({operationNumber: (operation)})
+
+	strings = {}
+
+	if len(operationList) > 0:
+		for orderN in operationList:
+			string = None
+			if len(operationList[orderN]) > 0:
+				string = "("
+				for o in operationList[orderN].values():
+					string = string + "'" + o.getOperationNumber() + "', "
+
+				string = string[:-2] + ")"
+			strings.update({orderN: string})
+
+	return operationList,strings
+
 
 class Service():
 	def __init__(self, cbroker, apikey, entity_type, resource):
@@ -96,6 +171,12 @@ class Entity:
 		if description!=Null:
 			self.addAttr("description","Text",description)
 
+	def __str__(self):
+		return ("Entity(ID: " + str(self.getID()) + ")")
+
+	def getJson(self):
+		return self.json_entity
+
 	#GET functions will return None if the operation isn't successful
 	def getID(self):
 		if "id" in self.json_entity:
@@ -111,20 +192,38 @@ class Entity:
 
 	#Get the attribute value from the json_entity
 	def getAttrValue(self, attr):
+		value = None
 		if attr in self.json_entity:
-			if "value" in self.json_entity[attr]:
-				id = self.json_entity[attr]["value"]
-				return id
-		return None
+			if isinstance(self.json_entity[attr],dict) and "value" in self.json_entity[attr]:
+				value = self.json_entity[attr]["value"]
+			else:
+				value = self.json_entity[attr]
+		return value
 
 	#The load function will load all the information from the json object
-	def load(self, json):
-		json_entity = json.dumps(json)
+	def load(self, entity):
 
-		if "id" in json:
-			self.id = json["id"]
-		if "type" in json:
-			self.type = json["type"]
+		if isinstance(entity,dict):
+			json_entity = entity
+		else:
+			json_entity = json.loads(entity)
+
+		if "id" in json_entity:
+			self.id = json_entity["id"]
+		if "type" in json_entity:
+			self.type = json_entity["type"]
+
+		self.json_entity = json_entity
+
+	#The addAttr function adds a new attribute to the Entity
+	def updateAttr(self, name, value):
+		if not(name in self.json_entity):
+			self.addAttr(name,"Text",value)
+		else:
+			if isinstance(self.json_entity[name],dict) and "value" in self.json_entity[name]:
+				self.json_entity[name]["value"]=value
+			else:
+				self.json_entity[name]=value #??? Caso em que o json só tem keyValue atributos ...
 
 	#The addAttr function adds a new attribute to the Entity
 	def addAttr(self, name, type, value):
@@ -151,37 +250,57 @@ class Entity:
 	def provision(self):
 		if not(self.exists()):
 			print(self.type + " provision: " + self.id)
-
 			HTTP.sendRequest("POST",HTTP.entities_url,HTTP.entities_headers,json.dumps(self.json_entity))
+			return 1
 		else:
-			print(colored("Warning - (Duplicate): ","red"),"The entity already exists in the broker ...")
+			print(colored("Warning - (Duplicate): ","red"),"The entity: " + str(self) + " already exists in the broker ...")
+			return 0
 
 	#def updateValue(self,attribute,new_value):
 
-	#Updates one (doesn't append new attributes)
-	def update(self,listofchanges):
-		deleteAttrs = []
+	def update(self):
+		newValues={}
 
-		#Change the values of the respective keys ...
-		for key in listofchanges:
-			if key in self.json_entity:
-				self.json_entity[key] = listofchanges[key]
+		for attr, value in self.json_entity.items():
+			if isinstance(value,dict):
+				newValues[attr] = value["value"]
 			else:
-				deleteAttrs.append(key)
+				if attr != "id" and attr != "type":  #??? Values with and without the parameters type, and meta-data ...
+					newValues[attr] = value
 
-		#Delete the attributes that aren't present in the object
-		for key in deleteAttrs:
-			del listofchanges[key]
+		entity_url = HTTP.entities_url + "/" + self.id
+		atribute_url = entity_url + "/attrs/?options=keyValues"
 
-		#Update only the values that correspond to the current attributes
-		if len(listofchanges) > 0:
-			entity_url = HTTP.entities_url + "/" + self.id
-			atribute_url = entity_url + "/attrs/?options=keyValues"
+		print("Update id: " + entity_url)
+		print(json.dumps(newValues))
 
-			HTTP.sendRequest("PATCH",atribute_url,HTTP.entities_headers,json.dumps(listofchanges))
+		# PUT can "create" new attrs ... for now the patch is sufficient ... ???
+		HTTP.sendRequest("PATCH",atribute_url,HTTP.entities_headers,json.dumps(newValues))
 
-		#Update the current state of the entity
-		self.get()
+#	#Updates one (doesn't append new attributes)
+#	def update(self,listofchanges):
+#		deleteAttrs = []
+#
+#		#Change the values of the respective keys ...
+#		for key in listofchanges:
+#			if key in self.json_entity:
+#				self.json_entity[key] = listofchanges[key]
+#			else:
+#				deleteAttrs.append(key)
+#
+#		#Delete the attributes that aren't present in the object
+#		for key in deleteAttrs:
+#			del listofchanges[key]
+#
+#		#Update only the values that correspond to the current attributes
+#		if len(listofchanges) > 0:
+#			entity_url = HTTP.entities_url + "/" + self.id
+#			atribute_url = entity_url + "/attrs/?options=keyValues"
+#
+#			HTTP.sendRequest("PATCH",atribute_url,HTTP.entities_headers,json.dumps(listofchanges))
+#
+#		#Update the current state of the entity
+#		self.get()
 
 	#The function exists verifies if the self.id is already present in the broker
 	def exists(self):
@@ -190,7 +309,7 @@ class Entity:
 		#Simple get of the entity, if the response is empty the entity don't exist in the broker
 		response = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
 		
-		if self.id in response:
+		if response != None and self.id in response:
 				return True
 		return False
 
@@ -201,6 +320,28 @@ class Entity:
 
 	def toString(self):
 		return json.dumps(self.json_entity,indent=2)
+
+	def __eq__(self, other): 
+		if not isinstance(other, Entity):
+			# don't attempt to compare against unrelated types
+			return NotImplemented
+
+		if  other.getJson() == None:
+			return False
+
+		if other.getID() == None or (self.getID() == None or (self.getID()!= other.getID())):
+			return False
+
+		if other.getType() == None or (self.getType() == None or (self.getType()!= other.getType())):
+			return False
+
+		for key in self.json_entity:
+			if other.getAttrValue(key) != None and self.getAttrValue(key) !=  other.getAttrValue(key):
+				print("Key: " + key)
+				print("Different values- self: " + str(self.getAttrValue(key)) + " and other: " + str(other.getAttrValue(key)) + "\n")
+				return False
+
+		return True
 
 class Worker(Entity):
 	def __init__(self,id=Null, name=Null, rfidCode=Null, description=Null):
@@ -229,199 +370,232 @@ class Worker(Entity):
 	def toString(self):
 		return "Worker: " + str(self.id) + " - " + self.entity_rfidCode
 
-class Station(Entity):
-	def __init__(self,id=Null,name=Null, description=Null, refPrevious=Null, refFollowing=Null, refScript=Null):
-			super().__init__(type="Station",id=id,name=name,description=description)
-			self.addAttr("refPrevious","Relationship",refPrevious)
-			self.addAttr("refFollowing","Relationship",refFollowing)
-			self.addAttr("refScript","Relationship",refScript)
-			self.addAttr("CO2","Float","0.0")
-			self.addAttr("humidity","Float","0.0")
-			self.addAttr("luminosity","Float","0.0")
-			self.addAttr("productivity","Float","0.0")
-			self.addAttr("temperature","Float","0.0")
+class Order(Entity):
+	def __init__(self,id=Null,name=Null,description=Null):
+		super().__init__(type="Order",id=id,name=name,description=description)
 
-	def gePrevious(self): 
-		if "refPrevious" in self.json_entity:
-			if "value" in self.json_entity["refPrevious"]:
-				previousStation = Station()
-				previousStation.get(self.json_entity["refPrevious"]["value"])
-				return previousStation
-		return None
+	def __str__(self):
+		return ("Order(Number: " + self.getOrderNumber() + ")")
 
-	def getFollowing(self):
-		if "refFollowing" in self.json_entity:
-			if "value" in self.json_entity["refFollowing"]:
-				nextStation = Station()
-				nextStation.get(self.json_entity["refFollowing"]["value"])
-				return nextStation
-		return None
+	def loadJsonEntity(self, entity):
+		super().load(entity)
 
-	def getScript(self):
-		if "refScript" in self.json_entity:
-			if "value" in self.json_entity["refScript"]:
-				script = Script()
-				script.get(self.json_entity["refScript"]["value"])
-				return script
-		return None
+	def getOrderID(self):
+		return self.id[18:]
 
-class Script(Entity):
-	def __init__(self,id=Null,name=Null, refStation=Null, refFirst=Null, description=Null):
-			super().__init__(type="Script",id=id,name=name,description=description)
-			self.addAttr("refStation","Relationship",refStation)
-			self.addAttr("refFirstTask","Relationship",refFirst)
-			self.addAttr("refCurrentTask","Relationship","") 
-			self.addAttr("assemblyTime","Float","0.0")
-			self.addAttr("startTime","DataTime","")
-			self.addAttr("stopTime","DataTime","")
-			self.addAttr("actualProcessState","Float","0.0")
-			self.addAttr("taskProcessState","Float","0.0")
-			self.addAttr("refWorker","Relationship","")
+	def getOrderNumber(self):
+		return self.getAttrValue("orderNumber")
 
-	#def getStation(self):
-	#	station = Station()
-	#	station.get(self.json_entity["refStation"]["value"])
-	#	return station
+	def getTimeStamp(self):
+		return self.getAttrValue("statusChangeTS")
 
-	def getByStation(self, refStation):
-		url = HTTP.entities_url + "/?q=refStation=='" + refStation + "'&type=Script&options=keyValues&attrs=type"
-		response = json.loads(HTTP.sendRequest("GET",url, HTTP.headers_get_iot))
-
-		#The response contains only one entity
-		#	the entity contains the id and type
-		if len(response)==1 and len(response[0])==2:
-			self.get(response[0]["id"])
-			return True
-			
-		return False
-
-	def getFistTask(self):
-		if "refFirstTask" in self.json_entity:
-			if "value" in self.json_entity["refFirstTask"]:
-				firstTask = Task()
-				firstTask.get(self.json_entity["refFirstTask"]["value"])
-				return firstTask
-		return None
-
-	def getCurrentlTask(self):
-		if "refCurrentTask" in self.json_entity:
-			if "value" in self.json_entity["refCurrentTask"]:
-				newtask = Task()
-				newtask.get(self.json_entity["refCurrentTask"]["value"])
-				return newtask
-		return None
-
-	#def getWorker(self):
-	#	worker = Worker()
-	#	worker.get(self.json_entity["refWorker"]["value"])
-	#	return worker
-
-	#Get the current number of Tasks
-	def getNumTasks(self):
-		url = HTTP.entities_url + "/?type=Task&q=refScript==\'" + self.id + "\'&attrs=type&options=values"
-
-		response = HTTP.sendRequest("GET",url,HTTP.headers_get_iot)
-
-		number_of_tasks = len(json.loads(response))
-		return number_of_tasks
-
-	#Update related to the state of the Script
-	def updateProcessState(self, taskNumber=-1, newTime="now"):
-		if taskNumber==-1:
-			actualTask = int(self.json_entity["taskNumber"]["value"])-1
+	def loadDBEntry(self, row):
+		super().__init__(type="Order",id=str(row["ordernumber"]),name="Order",description=Null)
+		self.addAttr("order_id","Text",row["id"])
+		self.addAttr("orderNumber","Text",str(row["ordernumber"]))
+		#self.addAttr("category","Text","???")
+		self.addAttr("partNumber","Text",row["partnumber"])
+		#self.addAttr("numberOfOperations","Integer",row["numberofoperations"])
+		self.addAttr("site","Text",row["site"])
+		self.addAttr("currentOperation","Text","-")
+		self.addAttr("planedHours","Number",row["planedhours"])
+		if row["scheduledstart"] == None:
+			self.addAttr("scheduledStart","Text","-")
 		else:
-			actualTask=taskNumber
+			self.addAttr("scheduledStart","Text",row["scheduledstart"])
 
-		if actualTask < 0:
-			processState = "Stopped"
+		if row["scheduledend"] == None:
+			self.addAttr("scheduledEnd","Text","-")
 		else:
-			if actualTask == 0:
-				processState = "0"
+			self.addAttr("scheduledEnd","Text",row["scheduledend"])
+		self.addAttr("actualStart","Text",row["actualstart"])
+		self.addAttr("actualEnd","Text","-")
+		self.addAttr("orderNewStatus","Text",row["ordernewstatus"])
+		self.addAttr("orderOldStatus","Text",row["orderoldstatus"])
+		self.addAttr("statusChangeTS","Text",row["statuschangets"])
+
+		#if(row["actualhours"]!=None):
+		#	self.addAttr("actualHours","Number",row["actualhours"])
+		#else:
+		#	self.addAttr("actualHours","Number",0)
+
+		numberOfOperations = DB_Entities.readNumberOfTotalOperations(self.getAttrValue("orderNumber"))
+		self.addAttr("numberOperations","Number",numberOfOperations)
+
+		numberOfEndedOperations = DB_Entities.readNumberOfEndedOperations(self.getAttrValue("orderNumber"))
+		self.addAttr("numberOfEndedOperations","Number",numberOfEndedOperations)
+
+		self.addAttr("progress","Number","0")
+		self.addAttr("scheduledDelay","Text","-")
+		self.addAttr("progressDelay","Text","-")
+
+	def updateProcessStatus(self):
+		if self.getAttrValue("scheduledDelay") == "-":
+			if date.today() > datetime.strptime(self.getAttrValue("scheduledDelay"), '%Y-%m-%d %H:%M:%S'):
+				self.updateAttr("scheduledDelay","DELAYED")
+
+		#estimate time until now
+
+		#compare with real time (until now)...
+
+	#def getPlanedHours(self):
+	#	sum = 0
+	#	with conn.cursor() as cur:
+	#		cur.execute("""SELECT SUM(planedHours)
+	#					FROM operation_status_changes
+	#					WHERE order_id = %s; 
+	#				""",(self.order_id,))
+	#		sum = float(cur.fetchone()[0])
+	#	return sum
+
+	def processScheduleDelay(self):
+		if self.json_entity["scheduledStart"] == "???" or self.json_entity["scheduledEnd"] == "???":
+			self.updateAttr("scheduledDelay","Indeterminate")
+
+		if self.json_entity["scheduledStart"] != None and self.json_entity["scheduledStart"] != "-":
+
+			if self.getAttrValue("scheduledStart")!=None:
+				scheduledStart = datetime.strptime(self.getAttrValue("scheduledStart"),'%Y-%m-%d %H:%M:%S')
 			else:
-				processState = str(format(100*(actualTask/self.getNumTasks()), '.3f'))
+				scheduledStart = now
 
-		return processState
+			now = datetime.now()
 
-	#Updates related to the start point of the Script
-	def initScript(self, timeInstant=Null):
-
-		print(colored("\nInit Script"), "green")
-
-		firstTask = self.getFistTask()
-		firstTask_ref = firstTask.json_entity["id"]
-
-		new_values = {}
-		new_values["refCurrentTask"] = firstTask_ref
-		new_values["taskNumber"] = "1"
-		new_values["taskProcessState"] = self.updateProcessState(1)
-		if timeInstant != Null:
-			new_values["startTime"] = timeInstant
-			new_values["stopTime"] = timeInstant
-
-		self.update(new_values)
-
-	#Updates related to the start point of the next Task
-	def nextTask(self, timeInstant):
-		actual = self.getCurrentlTask()
-		next = actual.getNextTask()
-		next_ref = next.json_entity["id"]
-
-		new_values = {}
-
-		if next_ref == self.json_entity["refFirstTask"]["value"]:
-			#Productivity
-			actualProfuctivity = float(self.json_entity["productivity"]["value"])
-			actualProfuctivity += 1
-			new_values["productivity"] = str(format(actualProfuctivity, '.3f'))
-
-			#AVG
-			assemblyTime = float(self.json_entity["assemblyTime"]["value"])
-			startTime = datetime.datetime.strptime(self.json_entity["startTime"]["value"], "%Y-%m-%dT%H:%M:%S.00Z")
-			endTime = datetime.datetime.strptime(self.json_entity["stopTime"]["value"], "%Y-%m-%dT%H:%M:%S.00Z")
-			duration = endTime - startTime
-			duration_s = duration.total_seconds()
-			avgTime = (assemblyTime+duration_s)/2
-
-			new_values["assemblyTime"] = str(format(avgTime, '.3f'))
-
-			self.initScript(timeInstant)
-			nextTaskNum = 1
+			if now > (scheduledStart + timedelta(1)):
+				self.updateAttr("scheduledDelay","Delayed start")
+			else:
+				self.updateAttr("scheduledDelay","Normal")
 		else:
-			actualTaskNum = int(self.json_entity["taskNumber"]["value"])
-			nextTaskNum = actualTaskNum + 1
+			self.updateAttr("scheduledDelay","???")
 
-		#Time
-		startTime = datetime.datetime.strptime(self.json_entity["startTime"]["value"], "%Y-%m-%dT%H:%M:%S.00Z")
-		actualTime = datetime.datetime.utcnow()
-		duration = actualTime - startTime
-		total_s = duration.total_seconds()
-		actualProcessState = 100*(total_s/float(self.json_entity["assemblyTime"]["value"]))
+	def processProgressDelay(self):
+		#All the operation already completed that are related to the order ...
+		entity_url = HTTP.entities_url + "/?q=order_id=='" + self.getAttrValue("id")[18:] + "';operationStatus=='COMPLETED'&type=Operation&attrs=planedHours,actualHours&options=keyValues" 
 
-		new_values["refCurrentTask"] = next_ref
-		new_values["taskNumber"] = str(nextTaskNum)
-		new_values["taskProcessState"] = self.updateProcessState(nextTaskNum,"now")
-		new_values["actualProcessState"] = str(format(actualProcessState, '.3f'))
+		response = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
+		json_response = json.loads(response)
 
-		self.update(new_values)
+		#print(json_response)
 
-class Task(Entity):
-	def __init__(self,id=Null,name=Null, refScript=Null, refNextTask=Null, refRequirements=Null, description=Null):
-			super().__init__(type="Task",id=id,name=name,description=description)
-			self.addAttr("assemblyTime","Float","0.0")
-			self.addAttr("startTime","DataTime","")
-			self.addAttr("stopTime","DataTime","")
-			self.addAttr("refScript","Relationship",refScript)
-			self.addAttr("refRequirements","Relationship",refRequirements)
-			self.addAttr("refNextTask","Relationship",refNextTask)
+		planedhours = 0
+		actualhours = 0
+		for op in json_response:
+			if "planedHours" in op:
+				planedhours = planedhours + op["planedHours"]
+				actualhours = actualhours + op["actualHours"]
 
-	def getScript(self):
-		if "refScript" in self.json_entity:
-			if "value" in self.json_entity["refScript"]:
-				newScript = Script()
-				newScript.get(self.json_entity["refScript"]["value"])
-				return newScript
+		# ??? Update the hours in the database ...
+		#self.updateAttr("actualHours",actualhours)
+
+		completedOperations = self.getAttrValue("numberOperations")
+		ended_op = self.getAttrValue("numberOfEndedOperations")
+
+		progress = 0
+		if ended_op>0:
+			progress = int((completedOperations/ended_op)*100)
+		self.updateAttr("progress",progress)
+
+		#Compare expected time with actual time until now/ time spent in any completed operation until now ... 
+		#ADVANCED(<-5%), NORMAL(+/- 5%) and DELAYED(>+5%) are the 3 states of delay
+
+		if actualhours < planedhours*0.95:
+			self.updateAttr("progressDelay","ADVANCED")
+		else:
+			if actualhours > planedhours*0.95 and actualhours < planedhours*1.05:
+				self.updateAttr("progressDelay","NORMAL")
+			else:
+				self.updateAttr("progressDelay","DELAYED")
+
+	def compareTimeStams(self, other):
+		if self.getTimeStamp() > other.getTimeStamp():
+			return True
+		else:
+			return False
+
+
+	def __eq__(self, other): 
+		if not isinstance(other, Order):
+			# don't attempt to compare against unrelated types
+			return NotImplemented
+
+		return super().__eq__(other)
+
+#class Station(Entity):
+	#def __init__(self,id=Null,name=Null, description=Null, refPrevious=Null, refFollowing=Null, refScript=Null):
+			#super().__init__(type="Station",id=id,name=name,description=description)
+			#self.addAttr("refPrevious","Relationship",refPrevious)
+			#self.addAttr("refFollowing","Relationship",refFollowing)
+			#self.addAttr("refScript","Relationship",refScript)
+			#self.addAttr("CO2","Float","0.0")
+			#self.addAttr("humidity","Float","0.0")
+			#self.addAttr("luminosity","Float","0.0")
+			#self.addAttr("productivity","Float","0.0")
+			#self.addAttr("temperature","Float","0.0")
+
+class WorkCenter(Entity):
+	def __init__(self,row):
+		super().__init__(type="WorkCenter",id=int(row["id"]),name="WorkCenter",description=row["denomination"])
+		self.part_id = row["id"]
+		self.payload = row
+
+	def __eq__(self, other): 
+		if not isinstance(other, MyClass):
+			# don't attempt to compare against unrelated types
+			return NotImplemented
+
+		return self.payload == other.payload
+
+class Operation(Entity):
+	def __init__(self,id=Null,name=Null,description=Null):
+		super().__init__(type="Operation",id=id,name=name,description=description)
+
+	def __str__(self):
+		return ("Operation(Number: " + str(self.getOperationNumber()) + ")")
+
+	def loadJsonEntity(self, entity):
+		super().load(entity)
+
+	def getOperationID(self):
+		return self.id[22:]
+
+	def getOperationNumber(self):
+		return self.getAttrValue("operationNumber")
+
+	def getOrderNumber(self):
+		return self.getAttrValue("orderNumber")
+
+	def getTimeStamp(self):
+		return self.getAttrValue("statusChangeTS")
+
+	def loadDBEntry(self, row):
+		super().__init__(type="Operation",id=str(row["operationnumber"])+str(row["ordernumber"]),name="Operation",description=row["description"])
+		self.addAttr("workCenter_id","Text",str(row["workcenter_id"]))
+		self.addAttr("order_id","Text",str(row["order_id"]))
+		self.addAttr("operationNumber","Text",str(row["operationnumber"]))
+		self.addAttr("planedHours","Number",row["planedhours"])
+		self.addAttr("operationNewStatus","Text",row["operationnewstatus"])
+		self.addAttr("operationOldStatus","Text",row["operationoldstatus"])
+		self.addAttr("statusChangeTS","Text",row["statuschangets"])
+		self.addAttr("orderNumber","Text",row["ordernumber"])
+		#if row["fristrundate"] != None:
+		#	self.addAttr("fristRunDate","Text",row["fristrundate"])
+		#else:
+		#	self.addAttr("fristRunDate","Text","-")
+		#if row["completerundate"] != None:
+		#	self.addAttr("completeDate","Text",row["completerundate"])
+		#else:
+		#	self.addAttr("completeDate","Text","-")
+
+	#GET the WC associated to this operation
+	def getWorkCenter(self):
+		if "refWorkCenter" in self.json_entity:
+			if "value" in self.json_entity["refWorkCenter"]:
+				newStation = Station()
+				newStation.get(self.json_entity["refWorkCenter"]["value"])
+				return newStation
 		return None
 
+	#GET the requirements associated to this operation
 	def getRequirements(self):
 		if "refRequirements" in self.json_entity:
 			if "value" in self.json_entity["refRequirements"]:
@@ -430,13 +604,28 @@ class Task(Entity):
 				return newRequirement
 		return None
 
-	def getNextTask(self):
-		if "refNextTask" in self.json_entity:
-			if "value" in self.json_entity["refNextTask"]:
-				newtask = Task()
-				newtask.get(self.json_entity["refNextTask"]["value"])
-				return newtask
-		return None
+class Part(Entity):
+	def __init__(self,row):
+		super().__init__(type="Part",id=int(row["id"]),name="Part",description=row["description"])
+		self.part_id = row["id"]
+		self.addAttr("partNumber","Text","???")
+		self.addAttr("serialNumber","Text",row["serialnumber"])
+		self.addAttr("partRev","Text",row["partrev"])
+		self.addAttr("cemb","Text",row["cemb"])
+		self.addAttr("planedHours","Number",row["planedhours"])
+
+	def getID(self):
+		return self.part_id
+
+	def getByOperation(self, refOperation):
+		return False
+
+	def __eq__(self, other): 
+		if not isinstance(other, MyClass):
+			# don't attempt to compare against unrelated types
+			return NotImplemented
+
+		return self.json_entity == other.json_entity
 
 class Requirements(Entity):
 	def __init__(self,id=Null,name=Null, query=Null, refSensor=Null, refStation=Null, max=Null, min=Null, description=Null):
@@ -481,7 +670,7 @@ class Device(Entity):
 		url = HTTP.entities_url + "/?q=refStation=='" + refStation + "'&type=Led&options=keyValues&attrs=type&limit=1"
 		response = json.loads(HTTP.sendRequest("GET",url, HTTP.headers_get_iot))
 
-		print("GET LED: " + json.dumps(response))
+		#print("GET LED: " + json.dumps(response))
 
 		if len(response)==1 and len(response[0])==2:
 			self.get(response[0]["id"])

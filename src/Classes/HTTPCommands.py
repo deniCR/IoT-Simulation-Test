@@ -32,8 +32,8 @@ headers_get_iot = {
 def sendRequest(command, url, headers={}, payload={}):
 	try:
 		response = requests.request(command, url, headers=headers, data = payload)
-		if response.status_code > 300:
-			response.raise_for_status()
+		#if response.status_code > 300:
+		#	response.raise_for_status()
 		return response.text
 	except requests.exceptions.HTTPError as errh:
 			print ("Http Error:",errh)
