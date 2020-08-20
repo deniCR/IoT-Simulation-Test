@@ -6,6 +6,7 @@ from time import sleep
 import requests
 import json
 import datetime
+import os
 
 import Classes.HTTPCommands as HTTPCommands
 import Classes.Entities as Entities
@@ -20,7 +21,7 @@ Order_subscription = {
 	},
 	"notification": {
 		"http": {
-			"url": "http://192.168.2.151:40000/notify/Order",
+			"url": "http://" + os.environ['DELAYANALYSIS_IP_ADDRESS'] + ":" + os.environ['DELAYANALYSIS_PORT_ADDRESS'] + "/notify/Order",
 			"accept": "application/json"
 		},
 		"attrs": [

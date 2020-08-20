@@ -6,10 +6,11 @@ from time import sleep
 from datetime import date
 import simplejson as json
 from psycopg2.extras import RealDictCursor
+import os
 
 import Classes.Entities as Entities
 
-conn = psycopg2.connect("dbname=MES-DB user=postgres host=192.168.2.108 port=5432")
+conn = psycopg2.connect("dbname=MES-DB user=postgres host=" + os.environ['DB_IP_ADDRESS'] + " port=" + os.environ['DB_PORT_ADDRESS'])
 
 # Read csv files
 def readCSV(order,operation):
@@ -316,8 +317,6 @@ class Order():
 			cur.execute("""UPDATE order_status_changes SET %s = %s WHERE order_id = %s;""",(attr,value,self.order_id))
 
 	def insert(self):
-
-		print("Insert Order: " + self.getOrderNumber())
 		with conn.cursor() as cur:
 			cur.execute("""INSERT INTO order_status_changes VALUES 
 				(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -446,7 +445,6 @@ class Operation():
 				self.order_id = None
 
 		if(self.order_id != None):
-			print("INSER operation: %s", (self.operation_id))
 
 			with conn.cursor() as cur:
 				cur.execute("""INSERT INTO operation_status_changes VALUES 
@@ -455,8 +453,6 @@ class Operation():
 							self.operationNewStatus,self.operationOldStatus,"{:.2f}".format(5,self.planedHours),self.statusChangeTS))
 			conn.commit()
 			return True
-		else:
-			print("Operation: " + self.getOperationNumber() + " Doesn't ")
 
 		return False
 
@@ -479,10 +475,13 @@ operation_status_changes_table = 	"""	CREATE TABLE operation_status_changes
 			);
 		"""
 
-def readWorkCenter():
+def readWorkCenter(known_WorkCenters):
 	WorkCenterList = {}
 	with conn.cursor(cursor_factory=RealDictCursor) as cur:
-		cur.execute("SELECT * FROM workcenter;")
+		if known_WorkCenters != None:
+			cur.execute("SELECT * FROM workcenter WHERE id NOT IN " + known_WorkCenters + ";")
+		else:
+			cur.execute("SELECT * FROM workcenter;")
 		data = cur.fetchall()
 
 		orders_payload = json.dumps(data, indent=2, default=str)
@@ -493,10 +492,13 @@ def readWorkCenter():
 
 	return WorkCenterList
 
-def readPart():
+def readPart(known_Parts):
 	PartList = {}
 	with conn.cursor(cursor_factory=RealDictCursor) as cur:
-		cur.execute("SELECT * FROM part;")
+		if known_Parts != None:
+			cur.execute("SELECT * FROM part WHERE id NOT IN " + known_Parts + ";")
+		else:
+			cur.execute("SELECT * FROM part;")
 		data = cur.fetchall()
 
 		for part in data:
@@ -510,7 +512,6 @@ def readNewOrders(knownOrders):
 	OrderList = {}
 	with conn.cursor(cursor_factory=RealDictCursor) as cur:
 		if knownOrders != None:
-			print(knownOrders)
 			cur.execute("SELECT * FROM order_status_changes WHERE ordernumber NOT IN " + knownOrders + " AND orderNumber NOT IN (SELECT orders_ended()) LIMIT 100;")
 		else:
 			cur.execute("SELECT * FROM order_status_changes LIMIT 25;")
