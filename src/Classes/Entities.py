@@ -16,6 +16,46 @@ Null_Time = datetime.strptime("1900-01-01T12:00:00.00Z", DateTimeFormat)
 #Leitura a partir de um ficheiro de configuração...
 conn = psycopg2.connect("dbname=MES-DB user=postgres host=192.168.2.108 port=5432")
 
+def getWorkCenters():
+	query = HTTP.entities_url + "/?type=WorkCenter&options=keyValues&attrs=id&limit=1000"
+
+	response = HTTP.sendRequest("GET",query,HTTP.headers_get_iot)
+
+	json_entity = {}
+	if response != None:
+		json_entity = json.loads(response)
+
+	string = None
+	if len(json_entity)>0:
+		string = "("
+
+		for w in json_entity:
+			string = string + "'" + w["id"][23:] + "', "
+
+		string = string[:-2] + ")"
+
+	return string
+
+def getParts():
+	query = HTTP.entities_url + "/?type=Part&options=keyValues&attrs=id&limit=1000"
+
+	response = HTTP.sendRequest("GET",query,HTTP.headers_get_iot)
+
+	json_entity = {}
+	if response != None:
+		json_entity = json.loads(response)
+
+	string = None
+	if len(json_entity)>0:
+		string = "("
+
+		for p in json_entity:
+			string = string + "'" + p["id"][17:] + "', "
+
+		string = string[:-2] + ")"
+
+	return string
+
 def getRunningOrders():
 	query = HTTP.entities_url + "/?q=orderNewStatus!='COMPLETE';orderNewStatus!='CANCELLED'&type=Order&options=keyValues&attrs=id,orderNumber,statusChangeTS&limit=1000"
 
@@ -271,9 +311,6 @@ class Entity:
 		entity_url = HTTP.entities_url + "/" + self.id
 		atribute_url = entity_url + "/attrs/?options=keyValues"
 
-		print("Update id: " + entity_url)
-		print(json.dumps(newValues))
-
 		# PUT can "create" new attrs ... for now the patch is sufficient ... ???
 		HTTP.sendRequest("PATCH",atribute_url,HTTP.entities_headers,json.dumps(newValues))
 
@@ -337,8 +374,6 @@ class Entity:
 
 		for key in self.json_entity:
 			if other.getAttrValue(key) != None and self.getAttrValue(key) !=  other.getAttrValue(key):
-				print("Key: " + key)
-				print("Different values- self: " + str(self.getAttrValue(key)) + " and other: " + str(other.getAttrValue(key)) + "\n")
 				return False
 
 		return True
