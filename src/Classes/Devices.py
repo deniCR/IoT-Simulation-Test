@@ -1,18 +1,22 @@
 import json
 import random
+from datetime import datetime, timedelta
 from time import sleep
 from termcolor import colored
 
 from . import HTTPCommands as HTTP
 from . import Entities
-from .Entities import Entity
-from .Entities import Null
+
+import Classes.Entities as Entities
+
+Null = "Null"
 
 class Device():
 	def __init__(self, id, type, protocol, apikey, ref):
 
 		self.json_entity = {}
 
+		self.id = str(id)
 		self.device_id = type[0].lower() + type[1:] + str(id)	
 		self.entity_type = type
 		self.entity_name = "urn:ngsi-ld:" + type + ":" + str(id)
@@ -34,16 +38,10 @@ class Device():
 		attributes["name"] = (type).replace('Sensor','')
 		attributes["type"] = "Integer"
 
-		self.attrs = []
-		self.attrs.append(attributes)
-
 		static_attributes = {}
 		static_attributes["name"] = "refStation"
 		static_attributes["type"] = "Relationship"
 		static_attributes["value"] = self.ref
-
-		self.st_attrs = []
-		self.st_attrs.append(static_attributes)
 	
 		device["attributes"] = []
 		device["attributes"].append(attributes)
@@ -52,17 +50,19 @@ class Device():
 
 		self.json_entity["devices"].append(device)
 
-	#def add_properties(self):
+	def getID(self):
+		return self.id
 
-	def sendData(self):
+	def sendData(self, payload=Null):
 		url=HTTP.agent_device_url+"/d?k="+self.apikey+"&i="+self.device_id
 		data = random.random()*100
-		payload= self.attrs[0]["object_id"] + "|" + str(data)
+		if payload == Null:
+			payload = self.json_entity["devices"][0]["attributes"][0]["object_id"] + "|" + str(data)
 		HTTP.sendRequest("POST",url,HTTP.up_headers,payload)
 
-	def sendData(self, payload):
-		url=HTTP.agent_device_url+"/d?k="+self.apikey+"&i="+self.device_id
-		HTTP.sendRequest("POST",url,HTTP.up_headers,payload)
+	#def sendData(self, payload):
+	#	url=HTTP.agent_device_url+"/d?k="+self.apikey+"&i="+self.device_id
+	#	HTTP.sendRequest("POST",url,HTTP.up_headers,payload)
 
 	def provision(self):
 		if not(self.exists()):
@@ -79,7 +79,7 @@ class Device():
 		self.device_id = device_id
 		entity_url = HTTP.agent_broker_url + "/devices/" + self.device_id
 
-		response = HTTP.sendRequest("GET",entity_url,HTTP.iot_headers)
+		response, headers = HTTP.sendRequest("GET",entity_url,HTTP.iot_headers)
 
 		if "device_id" in response:
 			if len(self.json_entity["devices"]) == 1:
@@ -87,12 +87,12 @@ class Device():
 			else:
 				self.json_entity["devices"].append(json.loads(response))
 
-	#Verify if the device_id is already registered on the iot-agent
+	#Verify if the device_id is registered on the iot-agent
 	def exists(self):
 		entity_url = HTTP.agent_broker_url + "/devices/" + self.device_id + "/?options=keyValues&attrs=type"
 
 		#Simple get of the entity, if the response is empty the entity don't exist in the broker
-		response = json.loads(HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot))
+		response = json.loads(HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)[0])
 	
 		if self.entity_name in response.values():
 				return True
@@ -109,157 +109,59 @@ class Device():
 		entity_url = HTTP.entities_url + "/" + self.entity_name
 		HTTP.sendRequest("DELETE",entity_url, HTTP.headers_get_iot)
 
-	def toString(self):
+	def __str__(self):
 		return "Device: " + self.entity_type + " - " + self.device_id
 
-class TempSensor(Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "TemperatureSensor", protocol, apikey, ref)
+class ProgressSensor(Device):
+	def __init__(self, protocol=Null, apikey=Null, ref=Null, workcenter_id=Null, operationNumber=Null, progress=Null, timeStamp=Null):
 
-		self.attrs[0]["type"] = "Float"
-		self.json_entity["devices"][0]["attributes"][0] = self.attrs[0]
+		self.id = str(workcenter_id)
+		super().__init__(workcenter_id, "ProgressSensor", protocol, apikey, ref)
 
-class HumSensor(Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "HumiditySensor", protocol, apikey, ref)
+		self.progress = progress
+		device = {}
+		static_attributes = {}
+		static_attributes["name"] = "workcenter_id"
+		static_attributes["type"] = "Text"
+		static_attributes["value"] = workcenter_id
 
+		self.json_entity["devices"][0]["static_attributes"].append(static_attributes)
 
-class LightSensor(Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "LightSensor", protocol, apikey, ref)
+		static_attributes_2 = {}
+		static_attributes_2["name"] = "operationNumber"
+		static_attributes_2["type"] = "Text"
+		static_attributes_2["value"] = operationNumber
 
+		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_2)
 
-class CO2Sensor(Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "CO2Sensor", protocol, apikey, ref)
+		static_attributes_3 = {}
+		static_attributes_3["name"] = "progress"
+		static_attributes_3["type"] = "Text"
+		static_attributes_3["value"] = progress
 
+		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_3)
 
-class weightSensor (Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "WeightSensor", protocol, apikey, ref)
+		if timeStamp != Null:
+			timeStamp_aux = datetime.strptime(timeStamp, '%Y-%m-%d %H:%M:%S.%f%z')
+		else:
+			timeStamp_aux = datetime.now()
 
+		static_attributes_4 = {}
+		static_attributes_4["name"] = "timeStamp"
+		static_attributes_4["type"] = "Numeric"
+		static_attributes_4["value"] = timeStamp_aux.timestamp()
 
-class MotionSensor (Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "MotionSensor", protocol, apikey, ref)
+		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_4)
 
-		attributes = {}
-		attributes["object_id"] = "t"
-		attributes["name"] = "time"
-		attributes["type"] = "DataTime"
-
-		self.attrs.append(attributes)
-
-		self.json_entity["devices"][0]["attributes"].append(attributes)
-
-class RFIDSensor(Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "RFIDSensor", protocol, apikey, ref)
-		
-		attributes = {}
-		attributes["object_id"] = "t"
-		attributes["name"] = "time"
-		attributes["type"] = "DataTime"
-
-		self.attrs.append(attributes)
-
-		self.json_entity["devices"][0]["attributes"].append(attributes)
-
-	def sendData(self, code):
-		payload="r|"+code
-		super().sendData(payload)
-
-class Button(Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "Button", protocol, apikey, ref)
-		
-		attributes = {}
-		attributes["object_id"] = "b"
-		attributes["name"] = "Button"
-		attributes["type"] = "Text"
-
-		self.attrs[0] = attributes
-
-		self.json_entity["devices"][0]["attributes"][0] = attributes
-
-	def sendData(self, code):
-		payload="b|" + code
-		super().sendData(payload)
-		print(colored("Button post data: ","blue") + code)
-
-	def nextTask(self):
-		self.sendData("Stop")
-
-	def initTask(self):
-		self.sendData("Start")
-
-class Led(Device):
-	def __init__(self, id, protocol, apikey, ref):
-		super().__init__(id, "Led", protocol, apikey, ref)
-		
-		self.state = "Off"
-		state = {}
-		state["object_id"] = "s"
-		state["name"] = "State"
-		state["type"] = "Text"
-
-		self.attrs[0] = state
-
-		self.json_entity["devices"][0]["attributes"][0] = state
-
-		self.color = "None"
-		attributes = {}
-		attributes["object_id"] = "c"
-		attributes["name"] = "Color"
-		attributes["type"] = "Text"
-
-		self.attrs.append(attributes)
-
-		self.json_entity["devices"][0]["attributes"].append(attributes)
-
-		device = self.json_entity["devices"][0]
-
-		device["transport"] = "HTTP"
-		device["endpoint"] = "http://192.168.2.151:40001/iot/" + self.device_id
-		device["state"] = "Off"
-		device["color"] = "None"
-
-		command_red = {}
-		command_red["name"] = "Red"
-		command_red["type"] = "Command"
-
-		command_green = {}
-		command_green["name"] = "Green"
-		command_green["type"] = "Command"
-
-		command_off = {}
-		command_off["name"] = "Off"
-		command_off["type"] = "Command"
-
-		device["commands"] = []
-		device["commands"].append(command_red)
-		device["commands"].append(command_green)
-		device["commands"].append(command_off)
+	def loadDBEntry(self,protocol,apikey,ref,row):
+		if 	"workcenter_id" in row and row["workcenter_id"]:
+			self.__init__(protocol, apikey, ref, row["workcenter_id"], row["operationnumber"], row["progress"], row["timestamp"])
+			return True
+		else:
+			return False
 
 	def sendData(self):
-		url=HTTP.agent_device_url+"/d?k="+self.apikey+"&i="+self.device_id
-		payload="s|" + self.state + "|c|" + self.color
-		print(colored("Led post data: ", "blue") + self.state +" "+ self.color, flush=True)
-		HTTP.sendRequest("POST",url,HTTP.up_headers,payload)
+		print("Deive: " + self.id + " progress: " + str(self.progress))
+		payload="p|"+str(self.progress)
+		super().sendData(payload)
 
-	def execCommand(self, command):
-		if command == 'Red':
-			self.state = "On"
-			self.color = "Red"
-			self.sendData()
-			pass
-		if command == 'Green':
-			self.state = "On"
-			self.color = "Green"
-			self.sendData()
-			pass
-		if command == 'Off':
-			self.state = "Off"
-			self.color = "None"
-			self.sendData()
-			pass

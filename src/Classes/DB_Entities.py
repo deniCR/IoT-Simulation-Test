@@ -9,16 +9,13 @@ from psycopg2.extras import RealDictCursor
 import os
 
 import Classes.Entities as Entities
+import Classes.Devices as Devices
 
 conn = psycopg2.connect("dbname=MES-DB user=postgres host=" + os.environ['DB_IP_ADDRESS'] + " port=" + os.environ['DB_PORT_ADDRESS'])
 
-# Read csv files
+# Read all events from the order and operation files
 def readCSV(order,operation):
 	eventDict = {}
-	#operation_count = 0
-	#order_count = 0
-	#orderDict = {}
-	#operationDict = {}
 
 	with open(order, mode='r') as csv_file:
 		order_dict = csv.DictReader(csv_file)
@@ -34,36 +31,9 @@ def readCSV(order,operation):
 
 	eventDict = dict(sorted(eventDict.items(), key=lambda item: item[0]))
 
-#	with open(operation, mode='r') as csv_file:
-#		operation_dict = csv.DictReader(csv_file)
-#		for row in operation_dict:
-#			if not row["ORDER_ID"] in operationDict:
-#				operationDict.update({row["ORDER_ID"]: {}})
-#			if not row["OPER_ID"] in operationDict[row["ORDER_ID"]]:
-#				operationDict[row["ORDER_ID"]].update({row["OPER_ID"]: {}})
-#			operationDict[row["ORDER_ID"]][row["OPER_ID"]].update({row["STATUS_CHANGE_TS"]: Operation(row)})
-#			operation_count += operation_count + 1
-#
-#		with open(order, mode='r') as csv_file:
-#			order_dict = csv.DictReader(csv_file)
-#			for row in order_dict:
-#				#List of operations associated with this order
-#				operation_list = []
-#
-#				if row["ORDER_ID"] in operationDict: # ??? Podem existir orders sem operações no dataset ....
-#					for op in operationDict[row["ORDER_ID"]].values():
-#						operation_list.append(op)
-#
-#				if not row["ORDER_ID"] in orderDict:
-#					orderDict.update({row["ORDER_ID"]: {}})
-#				orderDict[row["ORDER_ID"]].update({order_count: Order(row,operation_list)})
-#				order_count += order_count + 1
-
-	#return orderDict,operationDict
 	return eventDict
 
-# Insert WC, Operation, Parts
-# ??? - remove the use of conn and cur ...
+# Insert WC, Parts - from csv files
 def setStaticEntities(workcenter_file,part_file):
 	#Delete/Drop existing tables 
 	with conn.cursor() as cur:
@@ -71,21 +41,12 @@ def setStaticEntities(workcenter_file,part_file):
 		dropTable(cur,'part')
 		dropTable(cur,'order_status_changes')
 		dropTable(cur,'operation_status_changes')
+		dropTable(cur,'sensor_events')
 
 		print("Drop tables ...")
 
 		cur.execute(workcenter_table)
 		print("Create WC table ...")
-
-		#with open(workcenter_file, 'r') as f:
-		#	reader = csv.reader(f)
-		#	next(reader) # Skip the header row.
-		#	for row in reader:
-		#		cur.execute(
-		#		"INSERT INTO workcenter VALUES (%s)",
-		#		row[1]
-		#	)
-		#	f.close()
 
 		cur.execute(part_table)
 		print("Create Part table ...")
@@ -95,9 +56,9 @@ def setStaticEntities(workcenter_file,part_file):
 			next(reader) # Skip the header row.
 			for row in reader:
 				cur.execute(
-				"INSERT INTO part VALUES (%s, %s, %s, %s, %s)",
-				row
-			)
+					"INSERT INTO part VALUES (%s, %s, %s, %s, %s)",
+					row
+				)
 			f.close()
 
 		cur.execute(order_status_changes_table)
@@ -105,6 +66,9 @@ def setStaticEntities(workcenter_file,part_file):
 
 		cur.execute(operation_status_changes_table)
 		print("Create Operation table ...")
+
+		cur.execute(sensor_event_table)
+		print("Create sensor_events table ...")
 
 	conn.commit()
 
@@ -130,99 +94,88 @@ part_table = 	"""	CREATE TABLE part
 				"""
 
 order_status_changes_table = 	"""	CREATE TABLE order_status_changes
-			(
-				orderNumber VARCHAR(45) NOT NULL,
-				currentOperation INT,
-				partNumber VARCHAR(45),
-				part_id INT,
-				orderNewStatus VARCHAR(20) NOT NULL,
-				orderOldStatus VARCHAR(20) NOT NULL,
-				planedHours DECIMAL NOT NULL,
-				scheduledStart TIMESTAMP,
-				scheduledEnd TIMESTAMP,
-				actualStart VARCHAR(20),
-				actualEnd VARCHAR(20),
-				site VARCHAR(75),
-				statusChangeTS TIMESTAMP,
-				id INT GENERATED ALWAYS AS IDENTITY,
-				PRIMARY KEY (id),
-				CONSTRAINT fk_part FOREIGN KEY (part_id) REFERENCES part(id)
-			);
+									(
+										orderNumber VARCHAR(45) NOT NULL,
+										currentOperation INT,
+										partNumber VARCHAR(45),
+										part_id INT,
+										orderNewStatus VARCHAR(20) NOT NULL,
+										orderOldStatus VARCHAR(20) NOT NULL,
+										planedHours DECIMAL,
+										scheduledStart TIMESTAMPTZ,
+										scheduledEnd TIMESTAMPTZ,
+										actualStart VARCHAR(20),
+										actualEnd TIMESTAMPTZ,
+										site VARCHAR(75),
+										totalPlanedHours DECIMAL NOT NULL,
+										totalNumberOfOperations DECIMAL NOT NULL,
+										statusChangeTS TIMESTAMPTZ NOT NULL,
+										id INT GENERATED ALWAYS AS IDENTITY,
+										PRIMARY KEY (id),
+										CONSTRAINT fk_part FOREIGN KEY (part_id) REFERENCES part(id)
+									);
 		"""
 
 operation_status_changes_table = 	"""	CREATE TABLE operation_status_changes
-			(
-				operationNumber VARCHAR(45),
-				workcenter VARCHAR(45),
-				workcenter_id INT,
-				orderNumber VARCHAR(45),
-				order_id INT,
-				description VARCHAR(175),
-				operationNewStatus VARCHAR(20) NOT NULL,
-				operationOldStatus VARCHAR(20) NOT NULL,
-				planedHours DECIMAL NOT NULL,
-				statusChangeTS TIMESTAMP,
-				id INT GENERATED ALWAYS AS IDENTITY,
-				PRIMARY KEY (id),
-				CONSTRAINT fk_order FOREIGN KEY (order_id) REFERENCES order_status_changes(id),
-				CONSTRAINT fk_workcenter FOREIGN KEY (workcenter_id) REFERENCES workcenter(id)
-			);
+										(
+											operationNumber VARCHAR(45) NOT NULL,
+											workcenter VARCHAR(45) NOT NULL,
+											workcenter_id INT NOT NULL,
+											orderNumber VARCHAR(45) NOT NULL,
+											order_id INT NOT NULL,
+											description VARCHAR(175) NOT NULL,
+											operationNewStatus VARCHAR(20) NOT NULL,
+											operationOldStatus VARCHAR(20) NOT NULL,
+											planedHours DECIMAL,
+											statusChangeTS TIMESTAMPTZ NOT NULL,
+											id INT GENERATED ALWAYS AS IDENTITY,
+											PRIMARY KEY (id),
+											CONSTRAINT fk_order FOREIGN KEY (order_id) REFERENCES order_status_changes(id),
+											CONSTRAINT fk_workcenter FOREIGN KEY (workcenter_id) REFERENCES workcenter(id)
+										);
 		"""
+
+sensor_event_table = 	"""	CREATE TABLE sensor_events
+							(
+								workcenter_id INT NOT NULL,
+								operationNumber VARCHAR(75) NOT NULL,
+								progress DECIMAL NOT NULL,
+								timeStamp TIMESTAMPTZ NOT NULL,
+								id INT GENERATED ALWAYS AS IDENTITY,
+								PRIMARY KEY (id)
+							);
+				"""
 
 def dropTable(cur,table):
 	cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (table,))
 	if(cur.fetchone()[0]):
 		cur.execute("DROP TABLE %s CASCADE;" % (table,))
 
-#Deprecated ...
-#def importDataCSV(cur, table, file):
-#	with open(file, 'r') as f:
-#		reader = csv.reader(f)
-#		next(reader) # Skip the header
-#		for row in reader:
-#			cur.execute("INSERT INTO %s VALUES (%s, %s)",(table,row[0],row[1]))
-
-#class wc ...
-#class part ...
-
 class Order():
 	def __init__(self,row):
 		self.orderNumber = row["ORDER_ID"]
-		#self.orderDescription = row["OPER_DESC"]
-		#self.description = row["DESCRIPTION"]
-		#self.shopOrder = row["SHOP_ORDER_#"]
-		#self.category = row["CATEGORY"]
 		self.orderNewStatus = row["NEW_STATUS"]
 		self.orderOldStatus = row["OLD_STATUS"]
-		#self.cemb = row["CEMB"]
 		self.partNumber = row["PN"]
-		#self.serialNumber = row["SO_SERIAL_NUMBER"]
 		if row["SCHEDULE_START_DATE"][0] != ' ':
 			self.scheduledStartDate = row["SCHEDULE_START_DATE"]
+			#self.scheduledStartDate = datetime.datetime.strptime(row["SCHEDULE_START_DATE"], '%Y/%m/%d %H:%M:%S')
 		else:
 			self.scheduledStartDate = None
 		self.scheduledEndDate = None
-		#self.scheduledStart = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-		#self.scheduledEnd = (datetime.datetime.now() + datetime.timedelta(0, 60)).strftime('%Y-%m-%d %H:%M:%S')
+		
 		if row["ACTUAL_START_DATE"][0] != ' ':
 			self.actualStart = row["ACTUAL_START_DATE"]
+			#self.actualStart = datetime.datetime.strptime(row["ACTUAL_START_DATE"], '%Y/%m/%d %H:%M:%S')
 		else:
 			self.actualStart = None
 
 		self.actualEnd = None
-
-		#print("Self part Number: " + self.partNumber)
-
 		self.part_id = self.getPartID()
-
-#		self.operation_list = operations
-
-		self.currentOperation = None #CHANGE TO NULL value ...
-
+		self.currentOperation = None
 		self.planedHours = row["PLANNED_DURATION"]
-
-#		self.numberOfOperations = len(operations)
-
+		self.totalPlanedHours = row["TOTAL_HOURS"]
+		self.totalNumberOfOperations = row["TOTAL_OPS"]
 		self.site = row["SITE"]
 		self.statusChangeTS = row ["STATUS_CHANGE_TS"]
 
@@ -241,8 +194,8 @@ class Order():
 			else:
 				self.part_id = 0 # NULL 
 
-	def completed(self):
-		return self.orderNewStatus == "COMPLETED"
+	def complete(self):
+		return self.orderNewStatus == "COMPLETE"
 
 	def getOrderNumber(self):
 		return self.orderNumber
@@ -250,109 +203,60 @@ class Order():
 	def getTimestamp(self):
 		return self.statusChangeTS
 
-	def setTimestamp(self, newTime):
-		self.statusChangeTS = newTime
-
 	def updateDates(self,start_day,scale):
 		if self.scheduledStartDate!=None:
 			scheduledStartDate = datetime.datetime.strptime(self.scheduledStartDate, '%Y/%m/%d %H:%M:%S')
 			diff = scheduledStartDate - start_day
-			self.scheduledStartDate = (start_day+diff/scale).strftime('%Y/%m/%d %H:%M:%S')
+			sum = start_day+diff/scale
+			self.scheduledStartDate = sum.strftime('%Y/%m/%d %H:%M:%S')
+			print(self.scheduledStartDate)
 
 		if self.actualStart != None:
 			actualStart = datetime.datetime.strptime(self.actualStart, '%Y/%m/%d %H:%M:%S')
 			diff = actualStart - start_day
-			self.actualStart = (start_day+diff/scale).strftime('%Y/%m/%d %H:%M:%S')
-
-
-#	def nextOperation(self):
-#		end = 1
-#
-#		#Start Order
-#		if self.orderNewStatus == "SCHEDULED":
-#			self.orderNewStatus = "RUN"
-#			self.actualStart = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-#			with conn.cursor() as cur:
-#				cur.execute("""UPDATE order_status_changes SET orderNewStatus = 'RUN' WHERE order_id = %s;""",(self.order_id,))
-#				cur.execute("""UPDATE order_status_changes SET actualStart = %s WHERE order_id = %s;""",(self.actualStart,self.order_id,))
-#
-#			#Start the first operation
-#			self.currentOperation = self.operation_list[0]
-#			self.currentOperation.setStatus("RUN")
-#			self.currentOperation.update("operationNewStatus","RUN")
-#			self.operation_list.remove(self.currentOperation)
-#		#Order already in execution
-#		else:
-#			if self.orderNewStatus == "RUN":
-#
-#				#Complete the currentOperation
-#				self.currentOperation.setStatus("COMPLETED")
-#				self.currentOperation.update("operationNewStatus","COMPLETED")
-#
-#				#There are more operations to be executed
-#				if len(self.operation_list) > 0:
-#					#Change the current operation(COMPLETED) for the next operation of the order
-#					self.currentOperation = self.operation_list[0]
-#					self.currentOperation.setStatus("RUN")
-#					self.currentOperation.update("operationNewStatus","RUN")
-#					self.operation_list.remove(self.currentOperation)
-#
-#					#Update the current operation (to the new current operation)
-#					with conn.cursor() as cur:
-#						cur.execute("""UPDATE order_status_changes SET currentOperation = %s WHERE order_id = %s;
-#								""" % (self.currentOperation.getOperationID(),self.order_id,))
-#				#All the operations are completed
-#				else:
-#					self.actualEnd = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-#					with conn.cursor() as cur:
-#						cur.execute("""UPDATE order_status_changes SET orderNewStatus = 'COMPLETED' WHERE order_id = %s;""",(self.order_id,))
-#						cur.execute("""UPDATE order_status_changes SET actualEnd = %s WHERE order_id = %s;""",(self.actualEnd,self.order_id,))
-#					end = 0
-#
-#		conn.commit()
-#		return end
+			sum = start_day+diff/scale
+			self.actualStart = sum.strftime('%Y/%m/%d %H:%M:%S')
+			print(self.actualStart)
 
 	def update(attr,value):
 		with conn.cursor() as cur:
 			cur.execute("""UPDATE order_status_changes SET %s = %s WHERE order_id = %s;""",(attr,value,self.order_id))
 
+	def setTimestamps(self, newTime):
+		self.statusChangeTS = newTime
+
+		if self.orderNewStatus == "COMPLETE" or self.orderNewStatus == "CANCELLED":
+			self.actualEnd = newTime
+
 	def insert(self):
-		with conn.cursor() as cur:
-			cur.execute("""INSERT INTO order_status_changes VALUES 
-				(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-				""",(self.orderNumber,self.currentOperation,self.partNumber,self.part_id,
-					self.orderNewStatus,self.orderOldStatus,self.planedHours,self.scheduledStartDate,
-					self.scheduledEndDate,self.actualStart,self.actualEnd,self.site,self.statusChangeTS))
+		if(self.orderNumber.isdigit()):
+			print("INSER ORDER: " + self.orderNumber)
+			with conn.cursor() as cur:
+				cur.execute("""INSERT INTO order_status_changes VALUES 
+					(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+					""",(self.orderNumber,self.currentOperation,self.partNumber,self.part_id,
+						self.orderNewStatus,self.orderOldStatus,self.planedHours,self.scheduledStartDate,
+						self.scheduledEndDate,self.actualStart,self.actualEnd,self.site,self.totalPlanedHours,
+						self.totalNumberOfOperations,self.statusChangeTS))
 
-		conn.commit()
-		return True
+			conn.commit()
+			return True
+		else:
+			return False
 
+def insert_sensor_event(workcenter,operationNumber,precentage,timestamp):
+	with conn.cursor() as cur:
+		cur.execute("""INSERT INTO sensor_events VALUES (%s, %s, %s, %s)""",(workcenter,operationNumber,precentage,timestamp,))
+	conn.commit()
 
 class Operation():
 	def __init__(self,row):
 		self.operation_id = row["OPER_ID"]
-		self.operationNumber = row["OPER_ID"] # ??? - GET THE NEW ID
-#		self.workcenter_id = row["WC"]
+		self.operationNumber = row["OPER_ID"]
 		self.description = row["OPER_DESC"]
 		self.partNumber = row["PN"]
-#		self.operationStatus = row["OPERATION_STATUS"]
 		self.operationNewStatus = row["NEW_STATUS"]
 		self.operationOldStatus = row["OLD_STATUS"]
-		#if row["FIRST_RUN_DATE"] != '':
-		#	self.fristRunDate = row["FIRST_RUN_DATE"]
-		#else:
-		#	self.fristRunDate = None
-		#if row["COMPLETE_DATE"] != '':
-		#	self.completeRunDate = row["COMPLETE_DATE"]
-		#else:
-		#	self.completeRunDate = None
-		#self.batch = row["BATCH"]
-		#self.quantity = row["Basic_Qty"]
-		#self.setupMan = row["Setup_Man"]
-		#self.manPowerHours = row["Man_Power_Hours"]
-		#self.setupMachine = row["Setup_Machine"]
-		#self.machineHours = row["Machine_Hours"]
-
 		self.site = row["SITE"]
 
 		self.workcenter = row["WORKCENTER"]
@@ -390,10 +294,17 @@ class Operation():
 			else:
 				self.order_id = None
 
-		#self.planedHours = float(self.setupMan) + float(self.manPowerHours) + float(self.setupMachine) + float(self.machineHours)
+		opHours = row["PLANNED_DURATION"]
+		if not(opHours.isdigit()):
+			hours = opHours.split('-')
+			size = len(hours)
+			average = 0
+			for h in hours:
+				average = average + float(h)
+			average = average/size
+			opHours = average
 		
-		self.planedHours = float(str(row["PLANNED_DURATION"]).replace("-","."))
-
+		self.planedHours = float(opHours)
 		self.statusChangeTS = row ["STATUS_CHANGE_TS"]
 
 	def getOrderID(self):
@@ -404,6 +315,12 @@ class Operation():
 
 	def getOperationID(self):
 		return self.id[:22]
+
+	def getWorkCenterID(self):
+		return self.workcenter_id
+
+	def getWorkCenter(self):
+		return self.workcenter
 
 	def getOperationNumber(self):
 		return self.operationNumber
@@ -420,11 +337,17 @@ class Operation():
 	def getTimestamp(self):
 		return self.statusChangeTS
 
-	def setTimestamp(self, newTime):
+	def setTimestamps(self, newTime):
 		self.statusChangeTS = newTime
 
 	def setStatus(self, newStatus):
 		self.operationNewStatus = newStatus
+
+	def getOldStatus(self):
+		return self.operationOldStatus
+
+	def getNewStatus(self):
+		return self.operationNewStatus
 
 	def update(self,attr,value):
 		with conn.cursor() as cur:
@@ -432,7 +355,6 @@ class Operation():
 		conn.commit()
 
 	def insert(self):
-
 		with conn.cursor() as cur:
 			cur.execute("""SELECT id
 						FROM order_status_changes
@@ -444,36 +366,21 @@ class Operation():
 			else:
 				self.order_id = None
 
-		if(self.order_id != None):
+		if(self.order_id != None and self.operation_id.isdigit()):
+
+			print("INSERT OPERATION: " + self.operation_id)
 
 			with conn.cursor() as cur:
 				cur.execute("""INSERT INTO operation_status_changes VALUES 
 						(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 						""",(self.operation_id,self.workcenter,self.workcenter_id,self.order,self.order_id,self.description,
-							self.operationNewStatus,self.operationOldStatus,"{:.2f}".format(5,self.planedHours),self.statusChangeTS))
+							self.operationNewStatus,self.operationOldStatus,"{:.2f}".format(self.planedHours),self.statusChangeTS))
 			conn.commit()
 			return True
+		else:
+			print("Failde to insert Operations: " + self.operation_id)
 
 		return False
-
-operation_status_changes_table = 	"""	CREATE TABLE operation_status_changes
-			(
-				operationNumber VARCHAR(45),
-				workcenter VARCHAR(45),
-				workcenter_id INT,
-				orderNumber VARCHAR(45),
-				order_id INT,
-				description VARCHAR(175),
-				operationNewStatus VARCHAR(20) NOT NULL,
-				operationOldStatus VARCHAR(20) NOT NULL,
-				planedHours DECIMAL NOT NULL,
-				statusChangeTS TIMESTAMP,
-				id INT GENERATED ALWAYS AS IDENTITY,
-				PRIMARY KEY (id),
-				CONSTRAINT fk_order FOREIGN KEY (order_id) REFERENCES order_status_changes(id),
-				CONSTRAINT fk_workcenter FOREIGN KEY (workcenter_id) REFERENCES workcenter(id)
-			);
-		"""
 
 def readWorkCenter(known_WorkCenters):
 	WorkCenterList = {}
@@ -508,13 +415,13 @@ def readPart(known_Parts):
 
 	return PartList
 
-def readNewOrders(knownOrders):
+def readNewOrders(knownOrders, time):
 	OrderList = {}
 	with conn.cursor(cursor_factory=RealDictCursor) as cur:
 		if knownOrders != None:
-			cur.execute("SELECT * FROM order_status_changes WHERE ordernumber NOT IN " + knownOrders + " AND orderNumber NOT IN (SELECT orders_ended()) LIMIT 100;")
+			cur.execute("SELECT * FROM order_status_changes WHERE statuschangets >= (NOW() - interval '5 minutes') AND ordernumber NOT IN " + knownOrders + " AND orderNumber NOT IN (SELECT orders_ended()) ORDER BY statuschangets desc;")
 		else:
-			cur.execute("SELECT * FROM order_status_changes LIMIT 25;")
+			cur.execute("SELECT * FROM order_status_changes WHERE statuschangets >= (NOW() - interval '5 minutes') AND orderNumber NOT IN (SELECT orders_ended()) ORDER BY statuschangets desc;")
 		data = cur.fetchall()
 
 		for order in data:
@@ -535,13 +442,13 @@ def readNewOrders(knownOrders):
 
 	return OrderList
 
-def collectKnownOrders(knownOrders):
+def collectKnownOrders(knownOrders, time):
 	OrderList = {}
 	with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
 		if knownOrders != None:
 
-			cur.execute("SELECT * FROM order_status_changes WHERE ordernumber in " + knownOrders + " LIMIT 100;")
+			cur.execute("SELECT * FROM order_status_changes WHERE statuschangets >= (NOW() - interval '5 minutes') AND ordernumber in " + knownOrders + " ORDER BY statuschangets desc;")
 			data = cur.fetchall()
 
 			for order in data:
@@ -562,7 +469,7 @@ def collectKnownOrders(knownOrders):
 
 	return OrderList
 
-def readNewOperation(orderNumber, known_Operations):
+def readNewOperation(orderNumber, known_Operations, time):
 	OperationList = {}
 	with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
@@ -571,9 +478,9 @@ def readNewOperation(orderNumber, known_Operations):
 			known_Ops = known_Operations[orderNumber]
 
 		if known_Ops != None:
-			cur.execute("SELECT * FROM operation_status_changes WHERE operationnumber NOT IN " + known_Ops + " AND ordernumber = %s AND operationNumber NOT IN (SELECT operations_ended());",(str(orderNumber),))
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) " minutes') AND operationnumber NOT IN " + known_Ops + " AND ordernumber = %s ORDER BY statuschangets desc;",(str(orderNumber),))
 		else:
-			cur.execute("SELECT * FROM operation_status_changes WHERE ordernumber = %s;",(str(orderNumber),))
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time)" minutes') AND ordernumber = %s ORDER BY statuschangets desc;",(str(orderNumber),))
 		data = cur.fetchall()
 
 		for operation in data:
@@ -593,7 +500,7 @@ def readNewOperation(orderNumber, known_Operations):
 
 	return OperationList
 
-def collectKnownOperations(orderNumber, known_Operations):
+def collectKnownOperations(orderNumber, known_Operations, time):
 	OperationList = {}
 	with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
@@ -602,9 +509,9 @@ def collectKnownOperations(orderNumber, known_Operations):
 			known_Ops = known_Operations[orderNumber]
 
 		if known_Ops != None:
-			cur.execute("SELECT * FROM operation_status_changes WHERE operationnumber IN " + known_Ops + " AND ordernumber = %s;",(str(orderNumber),))
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '5 minutes') AND operationnumber IN " + known_Ops + " AND ordernumber = %s ORDER BY statuschangets desc;",(str(orderNumber),))
 		else:
-			cur.execute("SELECT * FROM operation_status_changes WHERE ordernumber = %s;",(str(orderNumber),))
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '5 minutes') AND ordernumber = %s ORDER BY statuschangets desc;",(str(orderNumber),))
 		data = cur.fetchall()
 
 		orders_payload = json.dumps(data, indent=2, default=str)
@@ -640,3 +547,34 @@ def readNumberOfEndedOperations(orderNumber):
 		data = cur.fetchone()["numberofoperationsended"]
 
 	return data
+
+def readTotalActualHours(orderNumber):
+	data = None
+	with conn.cursor(cursor_factory=RealDictCursor) as cur:
+		cur.execute("SELECT total_actual_hours(%s);",(str(orderNumber),))
+		data = cur.fetchone()["total_actual_hours"]
+
+	return data
+
+def readNewSensorEvents(lastID):
+
+	protocol = "PDI-IoTA-UltraLight"
+	apikey = "hfe9iuh83qw9hr8ew9her9"
+	ref = "/iot/d"
+
+	SensorEvList = {}
+	with conn.cursor(cursor_factory=RealDictCursor) as cur:
+		cur.execute("SELECT * FROM sensor_events WHERE id > " + str(lastID) + " LIMIT 30;")
+		data = cur.fetchall()
+
+		for sensor_ev in data:
+			decode = json.dumps(sensor_ev, indent=2, default=str)
+			encode = json.loads(decode)
+			ev = None
+			ev = Devices.ProgressSensor(0)
+			
+			if ev.loadDBEntry(protocol,apikey,ref,encode):
+				id = encode["id"]
+				SensorEvList.update({id: ev})
+
+	return SensorEvList

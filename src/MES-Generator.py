@@ -11,13 +11,12 @@ import Classes.DB_Entities as DB_Entities
 
 def event_simulation(eventDict, time_scale):
 
-	waitList = []
-
 	previousTimestemp=0
 	shiftTime=0
 	diff=0
 	scale=time_scale
 	failed=0
+	sucessed=0
 
 	start_event_simulation = datetime.datetime.now()
 
@@ -29,19 +28,36 @@ def event_simulation(eventDict, time_scale):
 			diff = nextTimestamp - previousTimestemp
 			shiftTime = float(diff/scale)
 
+		if isinstance(ev, DB_Entities.Operation):
+			if ev.getOldStatus() == 'RUN' and ev.getNewStatus() == "COMPLETE":
+				#cria novo evento de sensores WC - TimeStanp(Before) - progress 100%
+				DB_Entities.insert_sensor_event(ev.getWorkCenterID(),ev.getOperationNumber(),"100",datetime.datetime.now())
+			if ev.getOldStatus() == 'RUN' and ev.getNewStatus() != "COMPLETE":
+				#cria novo evento de sensores WC - TimeStanp(Before) - progress 66%
+				DB_Entities.insert_sensor_event(ev.getWorkCenterID(),ev.getOperationNumber(),"66",datetime.datetime.now())
+
 		sleep(shiftTime)
-		#print(ev.getTimestamp())
-		#print(datetime.datetime.now())
-		ev.setTimestamp(datetime.datetime.now())
+
+		ev.setTimestamps(datetime.datetime.now())
+		print(datetime.datetime.now())
 		if not(ev.insert()):
 			failed = failed+1
+		else:
+			sucessed = sucessed+1
+
+		if isinstance(ev, DB_Entities.Operation):
+			if (ev.getOldStatus() == 'AVAILABLE' or ev.getOldStatus() == 'SUSPENDED') and ev.getNewStatus() == "RUN":
+				#cria novo evento de sensores WC - TimeStanp(After) - progress 33% ??? e se a operação passa de * -> AVAIABLE ???
+				DB_Entities.insert_sensor_event(ev.getWorkCenterID(),ev.getOperationNumber(),"33",datetime.datetime.now())
+
 		previousTimestemp=nextTimestamp
 		nextTimestamp=0
 
 	end_event_simulation = datetime.datetime.now()
 	operations_failed2insert = failed
+	operations_sucessed2insert = sucessed
 
-	return start_event_simulation,end_event_simulation,operations_failed2insert
+	return start_event_simulation,end_event_simulation,operations_failed2insert,operations_sucessed2insert
 
 def main(argv):
 	WC_csv = 'WorkCenter.csv'
@@ -89,13 +105,14 @@ def main(argv):
 			ev.updateDates(virtual_start_day,time_scale)
 
 	#Event simulation
-	st_ev_sim,end_ev_sim,op_failed2insert = event_simulation(eventDict, time_scale)
+	st_ev_sim,end_ev_sim,op_failed2insert,op_sucessed2insert = event_simulation(eventDict, time_scale)
 
 	print("\nEvent simulation start: " + str(st_ev_sim))
 	print("End event simulation: " + str(end_ev_sim))
 	print("Time interval: " + str(end_ev_sim - st_ev_sim))
 	print("End time vs Expected end time: " + str(end_ev_sim - expected_end))
 	print("Operations Failed: " + str(op_failed2insert))
+	print("Operation Succeeded: " + str(op_sucessed2insert))
 
 	DB_Entities.conn.close()
 

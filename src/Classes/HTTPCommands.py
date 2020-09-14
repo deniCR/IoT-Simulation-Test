@@ -1,15 +1,16 @@
 import requests
 import json
+import os
 
-host_url = "http://192.168.2.108"
-orion_url = host_url + ":1026"
+host_url = "http://" + os.environ['FIWARE_IP_ADDRESS']
+orion_url = host_url + ":" + os.environ['FIWARE_PORT_ADDRESS']
 entities_url = orion_url + "/v2/entities"
 
 agent_broker_url = host_url + ":4041/iot"
 agent_device_url = host_url + ":7896/iot"
 
 #Service ...
-cbroker = "http://orion:1026"
+cbroker = "http://orion:" + os.environ['FIWARE_PORT_ADDRESS']
 
 up_headers = {
 	'Content-Type': 'text/plain'
@@ -32,9 +33,10 @@ headers_get_iot = {
 def sendRequest(command, url, headers={}, payload={}):
 	try:
 		response = requests.request(command, url, headers=headers, data = payload)
+
 		#if response.status_code > 300:
 		#	response.raise_for_status()
-		return response.text
+		return response.text,response.headers
 	except requests.exceptions.HTTPError as errh:
 			print ("Http Error:",errh)
 	except requests.exceptions.ConnectionError as errc:
