@@ -11,7 +11,7 @@ import os
 import Classes.Entities as Entities
 import Classes.Devices as Devices
 
-conn = psycopg2.connect("dbname=MES-DB user=postgres host=" + os.environ['DB_IP_ADDRESS'] + " port=" + os.environ['DB_PORT_ADDRESS'])
+conn = psycopg2.connect("dbname=" + os.environ['DB_NAME'] + " user=" + os.environ['DB_USER'] + " password=" + os.environ['DB_PASSWORD'] + " host=" + os.environ['DB_IP_ADDRESS'] + " port=" + os.environ['DB_PORT_ADDRESS'])
 
 # Read all events from the order and operation files
 def readCSV(order,operation):
@@ -478,9 +478,9 @@ def readNewOperation(orderNumber, known_Operations, time):
 			known_Ops = known_Operations[orderNumber]
 
 		if known_Ops != None:
-			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) " minutes') AND operationnumber NOT IN " + known_Ops + " AND ordernumber = %s ORDER BY statuschangets desc;",(str(orderNumber),))
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " minutes') AND operationnumber NOT IN " + known_Ops + " AND ordernumber = '" + str(orderNumber) + "' ORDER BY statuschangets desc;")
 		else:
-			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time)" minutes') AND ordernumber = %s ORDER BY statuschangets desc;",(str(orderNumber),))
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " minutes') AND ordernumber = '" + str(orderNumber) + "' ORDER BY statuschangets desc;")
 		data = cur.fetchall()
 
 		for operation in data:
@@ -509,9 +509,9 @@ def collectKnownOperations(orderNumber, known_Operations, time):
 			known_Ops = known_Operations[orderNumber]
 
 		if known_Ops != None:
-			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '5 minutes') AND operationnumber IN " + known_Ops + " AND ordernumber = %s ORDER BY statuschangets desc;",(str(orderNumber),))
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " minutes') AND operationnumber IN " + known_Ops + " AND ordernumber = '" + str(orderNumber) + "' ORDER BY statuschangets desc;")
 		else:
-			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '5 minutes') AND ordernumber = %s ORDER BY statuschangets desc;",(str(orderNumber),))
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " minutes') AND ordernumber = '" + str(orderNumber) + "' ORDER BY statuschangets desc;")
 		data = cur.fetchall()
 
 		orders_payload = json.dumps(data, indent=2, default=str)

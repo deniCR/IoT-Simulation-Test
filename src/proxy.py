@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.8
 
 import signal
 import sys
@@ -78,7 +78,7 @@ def main():
 			part.provision()
 			del part
 
-		time = 5 #Events from the last 5 minutes
+		time = 1 #Events from the last 5 minutes
 
 		#GET Known Orders and Operations from the broker
 		known_ordersList, known_Orders = Entities.getRunningOrders()
@@ -92,11 +92,11 @@ def main():
 		orderUpdated = orderUpdated + aux_orderUpdated
 		operationsUpdated = operationsUpdated + aux_operationsUpdated
 
-		print("Order Provision: " + str(orderProvioned))
-		print("Operation Provision: " + str(operationsProvisioned))
-		print("Order updated: " + str(orderUpdated))
-		print("Operation updated: " + str(operationsUpdated))
-		print("\n\n")
+	print("Order Provision: " + str(orderProvioned))
+	print("Operation Provision: " + str(operationsProvisioned))
+	print("Order updated: " + str(orderUpdated))
+	print("Operation updated: " + str(operationsUpdated))
+	print("\n\n")
 
 if __name__ == "__main__":
 		main()
