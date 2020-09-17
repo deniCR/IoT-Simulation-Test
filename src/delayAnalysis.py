@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import BytesIO
@@ -143,7 +143,7 @@ def main():
 	HTTPCommands.sendRequest("POST",url_sub,HTTPCommands.iot_headers,json.dumps(Progress_subscription))
 
 	print("Start server ...", flush=True)
-	httpd = HTTPServer(("127.0.0.1", int(os.environ['DELAYANALYSIS_PORT_ADDRESS'])), SimpleHTTPRequestHandler)
+	httpd = HTTPServer(('', int(os.environ['DELAYANALYSIS_PORT_ADDRESS'])), SimpleHTTPRequestHandler)
 	httpd.serve_forever()
 
 if __name__ == "__main__":
