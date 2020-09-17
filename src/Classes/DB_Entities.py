@@ -1,9 +1,6 @@
 import csv
-import postgresql
 import psycopg2
 import datetime
-from time import sleep
-from datetime import date
 import simplejson as json
 from psycopg2.extras import RealDictCursor
 import os
@@ -218,7 +215,7 @@ class Order():
 			self.actualStart = sum.strftime('%Y/%m/%d %H:%M:%S')
 			print(self.actualStart)
 
-	def update(attr,value):
+	def update(self,attr,value):
 		with conn.cursor() as cur:
 			cur.execute("""UPDATE order_status_changes SET %s = %s WHERE order_id = %s;""",(attr,value,self.order_id))
 
@@ -328,9 +325,6 @@ class Operation():
 	def getOperationDescription(self):
 		return self.description
 
-	def getOperationID(self):
-		return self.operation_id
-
 	def getPlanedHours(self):
 		return self.planedDuration
 
@@ -391,7 +385,6 @@ def readWorkCenter(known_WorkCenters):
 			cur.execute("SELECT * FROM workcenter;")
 		data = cur.fetchall()
 
-		orders_payload = json.dumps(data, indent=2, default=str)
 		for order in data:
 			decode = json.dumps(order, indent=2, default=str)
 			encode = json.loads(decode)
@@ -514,7 +507,6 @@ def collectKnownOperations(orderNumber, known_Operations, time):
 			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " minutes') AND ordernumber = '" + str(orderNumber) + "' ORDER BY statuschangets desc;")
 		data = cur.fetchall()
 
-		orders_payload = json.dumps(data, indent=2, default=str)
 		for operation in data:
 			decode = json.dumps(operation, indent=2, default=str)
 			encode = json.loads(decode)

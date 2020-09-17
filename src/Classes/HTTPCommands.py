@@ -1,5 +1,4 @@
 import requests
-import json
 import os
 
 host_url = "http://" + os.environ['FIWARE_IP_ADDRESS']

@@ -1,11 +1,8 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
-import sys, getopt
-import csv
+import sys
 import datetime
-
 from time import sleep
-import random
 
 import Classes.DB_Entities as DB_Entities
 

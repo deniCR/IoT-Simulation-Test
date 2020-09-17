@@ -1,13 +1,10 @@
 import json
-from time import sleep
 from termcolor import colored
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from . import HTTPCommands as HTTP
 
 import Classes.DB_Entities as DB_Entities
-
-import psycopg2
 
 Null = "Null"
 DateTimeFormat = "%Y-%m-%d %H:%M:%S.%f%z"
@@ -386,7 +383,7 @@ class Entity:
 		print(attrList,newValues)
 
 		# POST can "create" new attrs ... for now the patch is sufficient ... ???
-		r = HTTP.sendRequest("POST",atribute_url,HTTP.entities_headers,json.dumps(newValues))
+		HTTP.sendRequest("POST",atribute_url,HTTP.entities_headers,json.dumps(newValues))
 
 	#The function exists verifies if the self.id is already present in the broker
 	def exists(self):
@@ -403,9 +400,6 @@ class Entity:
 	def delete(self):
 		entity_url = HTTP.entities_url + "/" + self.id
 		HTTP.sendRequest("DELETE",entity_url)
-
-	def __str__(self):
-		return json.dumps(self.json_entity,indent=2)
 
 	def __eq__(self, other): 
 		if not isinstance(other, Entity):
@@ -558,7 +552,6 @@ class Order(Entity):
 		entity_url = HTTP.entities_url + "/?q=order_id=='" + self.getAttrValue("id")[18:] + "';operationStatus=='COMPLETED'&type=Operation&attrs=planedHours,actualHours&options=keyValues" 
 
 		response,headers = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
-		json_response = json.loads(response)
 
 		totalPlanedHours = self.getAttrValue("totalPlanedHours")
 		totalActualHours = self.getAttrValue("totalActualHours")
@@ -620,7 +613,6 @@ class Order(Entity):
 		if response != None:
 			json_entity = json.loads(response)
 
-		operationList = {}
 		# ??? Pode ser otimizado, só é necessário adequirir o ID ...
 		for o in json_entity:
 			deleteEntity(o["id"])
@@ -638,7 +630,7 @@ class WorkCenter(Entity):
 		self.payload = row
 
 	def __eq__(self, other): 
-		if not isinstance(other, MyClass):
+		if not isinstance(other, WorkCenter):
 			return NotImplemented
 
 		return self.payload == other.payload
@@ -687,13 +679,13 @@ class Operation(Entity):
 			return False
 
 	#GET the WC associated to this operation
-	def getWorkCenter(self):
-		if "refWorkCenter" in self.json_entity:
-			if "value" in self.json_entity["refWorkCenter"]:
-				newStation = Station()
-				newStation.get(self.json_entity["refWorkCenter"]["value"])
-				return newStation
-		return None
+	#def getWorkCenter(self):
+	#	if "refWorkCenter" in self.json_entity:
+	#		if "value" in self.json_entity["refWorkCenter"]:
+	#			newStation = Station()
+	#			newStation.get(self.json_entity["refWorkCenter"]["value"])
+	#			return newStation
+	#	return None
 
 	def processProgress(self, progress):
 		self.setAttr("progress","Text",str(progress))
@@ -716,73 +708,74 @@ class Part(Entity):
 		return False
 
 	def __eq__(self, other): 
-		if not isinstance(other, MyClass):
+		if not isinstance(other, Part):
 			return NotImplemented
 
 		return self.json_entity == other.json_entity
 
-class Requirements(Entity):
-	def __init__(self,id=Null,name=Null, query=Null, refSensor=Null, refStation=Null, max=Null, min=Null, description=Null):
-		super().__init__(type="Requirements",id=id,name=name,description=description)
-		self.addAttr("refDevice","Relationship",refSensors)
-		self.addAttr("refStation", "Relationship", refDevice)
-		self.addAttr("query", "Query", query)
-		self.addAttr("max", "Number", max)
-		self.addAttr("min", "Number", min)
 
-	def getDevice(self):
-		if "refDevice" in self.json_entity:
-			if "value" in self.json_entity["refDevice"]:
-				device = Device()
-				device.get(self.json_entity["refDevice"]["value"])
-				return device
-		return None
-
-	def getStation(self):
-		if "refStation" in self.json_entity:
-			if "value" in self.json_entity["refStation"]:
-				station = Station()
-				station.get(self.json_entity["refStation"]["value"])
-				return station
-		return None
-
-class Device(Entity):
-	def __init__(self):
-		super().__init__(type="Device")
-
-	def __init__(self,id=Null,name=Null, description=Null):
-		super().__init__(type="Device",id=id,name=name,description=description)
-
-	def get(self, entity_id):
-		self.id = entity_id
-		entity_url = HTTP.entities_url + "/" + self.id
-
-		response,headers = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
-		self.json_entity = json.loads(response)
-
-	def getByStation(self, refStation):
-		url = HTTP.entities_url + "/?q=refStation=='" + refStation + "'&type=Led&options=keyValues&attrs=type&limit=1"
-		response = json.loads(HTTP.sendRequest("GET",url, HTTP.headers_get_iot)[0])
-
-		if len(response)==1 and len(response[0])==2:
-			self.get(response[0]["id"])
-			return True
-			
-		return False
-
-	def execCommand(self, command):
-		if "id" in self.json_entity:
-			if command in self.json_entity:
-				if "Command" in self.json_entity[command].values():
-
-					payload = {}
-					payload[command] = {}
-					payload[command]["type"] = "Command"
-					payload[command]["value"] = ""
-
-					print(colored("Send command: ", "green") + command)
-					HTTP.sendRequest("PATCH",HTTP.entities_url + "/" + self.json_entity["id"] + "/attrs",HTTP.iot_headers,json.dumps(payload))
-					return True
-
-		print(colored("Error, the command could not be sent: ", "red") + command)
-		return False
+#class Requirements(Entity):
+#	def __init__(self,id=Null,name=Null, query=Null, refSensor=Null, refStation=Null, max=Null, min=Null, description=Null):
+#		super().__init__(type="Requirements",id=id,name=name,description=description)
+#		self.addAttr("refDevice","Relationship",refSensors)
+#		self.addAttr("refStation", "Relationship", refDevice)
+#		self.addAttr("query", "Query", query)
+#		self.addAttr("max", "Number", max)
+#		self.addAttr("min", "Number", min)
+#
+#	def getDevice(self):
+#		if "refDevice" in self.json_entity:
+#			if "value" in self.json_entity["refDevice"]:
+#				device = Device()
+#				device.get(self.json_entity["refDevice"]["value"])
+#				return device
+#		return None
+#
+#	def getStation(self):
+#		if "refStation" in self.json_entity:
+#			if "value" in self.json_entity["refStation"]:
+#				station = Station()
+#				station.get(self.json_entity["refStation"]["value"])
+#				return station
+#		return None
+#
+#class Device(Entity):
+#	def __init__(self):
+#		super().__init__(type="Device")
+#
+#	def __init__(self,id=Null,name=Null, description=Null):
+#		super().__init__(type="Device",id=id,name=name,description=description)
+#
+#	def get(self, entity_id):
+#		self.id = entity_id
+#		entity_url = HTTP.entities_url + "/" + self.id
+#
+#		response,headers = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
+#		self.json_entity = json.loads(response)
+#
+#	def getByStation(self, refStation):
+#		url = HTTP.entities_url + "/?q=refStation=='" + refStation + "'&type=Led&options=keyValues&attrs=type&limit=1"
+#		response = json.loads(HTTP.sendRequest("GET",url, HTTP.headers_get_iot)[0])
+#
+#		if len(response)==1 and len(response[0])==2:
+#			self.get(response[0]["id"])
+#			return True
+#			
+#		return False
+#
+#	def execCommand(self, command):
+#		if "id" in self.json_entity:
+#			if command in self.json_entity:
+#				if "Command" in self.json_entity[command].values():
+#
+#					payload = {}
+#					payload[command] = {}
+#					payload[command]["type"] = "Command"
+#					payload[command]["value"] = ""
+#
+#					print(colored("Send command: ", "green") + command)
+#					HTTP.sendRequest("PATCH",HTTP.entities_url + "/" + self.json_entity["id"] + "/attrs",HTTP.iot_headers,json.dumps(payload))
+#					return True
+#
+#		print(colored("Error, the command could not be sent: ", "red") + command)
+#		return False

@@ -1,9 +1,6 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 import signal
-import sys
-from time import sleep
-from datetime import datetime, timedelta
 
 import Classes.Entities as Entities
 import Classes.DB_Entities as DB_Entities

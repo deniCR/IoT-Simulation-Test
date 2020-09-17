@@ -1,13 +1,9 @@
 import json
 import random
-from datetime import datetime, timedelta
-from time import sleep
+from datetime import datetime
 from termcolor import colored
 
 from . import HTTPCommands as HTTP
-from . import Entities
-
-import Classes.Entities as Entities
 
 Null = "Null"
 
@@ -119,7 +115,6 @@ class ProgressSensor(Device):
 		super().__init__(workcenter_id, "ProgressSensor", protocol, apikey, ref)
 
 		self.progress = progress
-		device = {}
 		static_attributes = {}
 		static_attributes["name"] = "workcenter_id"
 		static_attributes["type"] = "Text"

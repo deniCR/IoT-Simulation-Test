@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from io import BytesIO
 from time import sleep
-import requests
 import json
-import datetime
 import os
 
 import Classes.HTTPCommands as HTTPCommands
@@ -124,7 +121,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 		body = self.rfile.read(content_length)
 		self.send_response(200)
 		self.end_headers()
-		json_text = body.decode('utf8')
 
 		if self.path=='/notify/Order':
 			processOrders(body)

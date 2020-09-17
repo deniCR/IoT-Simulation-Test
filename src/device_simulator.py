@@ -2,7 +2,6 @@
 
 from time import sleep
 
-import Classes.Devices as Devices
 import Classes.Entities as Entities
 import Classes.DB_Entities as DB_Entities
 
