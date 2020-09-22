@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import signal
+import os
 
 import Classes.Entities as Entities
 import Classes.DB_Entities as DB_Entities
@@ -8,8 +9,9 @@ import Classes.DB_Entities as DB_Entities
 stop = False
 
 def signal_handler(sig, frame):
-    global stop
-    stop = True
+	global stop
+	stop = True
+
 signal.signal(signal.SIGINT, signal_handler)
 
 def collectNewEvents(known_Orders, known_Operations, time):
@@ -34,21 +36,22 @@ def updateKnownEntities(known_Orders, known_ordersList, known_Operations, known_
 	orderUpdated = 0
 	operationsUpdated = 0
 
-	for orderNumber, order in updateList.items():
-		if orderNumber in known_ordersList and order.compareTimeStams(known_ordersList[orderNumber]):
-			order.update()
+	for orderNumber, order in known_ordersList.items():
+		if orderNumber in updateList and updateList[orderNumber].compareTimeStams(order):
+			updateList[orderNumber].update()
 			orderUpdated = orderUpdated +1
 
-			opList = DB_Entities.collectKnownOperations(orderNumber, known_Operations, time)
-			for opN, op in opList.items():
-				if orderNumber in known_operationList and known_operationList[orderNumber] != None and (opN in known_operationList[orderNumber] and (op.compareTimeStams(known_operationList[orderNumber][opN]))):
-					op.update()
-					print("Update operation: " + opN)
-					operationsUpdated = operationsUpdated +1
+		opList = DB_Entities.collectKnownOperations(orderNumber, known_Operations, time)
+		for opN, op in opList.items():
+			if (orderNumber in known_operationList) and known_operationList[orderNumber] != None and (opN in known_operationList[orderNumber] and (op.compareTimeStams(known_operationList[orderNumber][opN]))):
+				op.update()
+				print("Update operation: " + opN)
+				operationsUpdated = operationsUpdated +1
 
 	return orderUpdated,operationsUpdated
 
 def main():
+	global stop
 
 	orderProvioned = 0
 	operationsProvisioned = 0
@@ -75,7 +78,9 @@ def main():
 			part.provision()
 			del part
 
-		time = 1 #Events from the last 5 minutes
+		time = 360 #Events from the last T seconds in real time
+
+		#time = int(time/float(os.environ("TIME_SCALE")))
 
 		#GET Known Orders and Operations from the broker
 		known_ordersList, known_Orders = Entities.getRunningOrders()

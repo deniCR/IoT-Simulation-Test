@@ -496,7 +496,7 @@ class Order(Entity):
 			self.addAttr("actualEnd","Number",actualend.timestamp())
 		self.addAttr("orderNewStatus","Text",row["ordernewstatus"])
 		self.addAttr("orderOldStatus","Text",row["orderoldstatus"])
-		statusChangeTS = datetime.strptime(row["statuschangets"], '%Y-%m-%d %H:%M:%S.%f%z')
+		statusChangeTS = datetime.strptime(row["statuschangets"], '%Y-%m-%d %H:%M:%S%z')
 		self.addAttr("statusChangeTS","Number",statusChangeTS.timestamp())
 		self.addAttr("totalPlanedHours","Number",float(row["totalplanedhours"]))
 
@@ -666,6 +666,7 @@ class Operation(Entity):
 		self.addAttr("order_id","Text",str(row["order_id"]))
 		self.addAttr("operationNumber","Text",str(row["operationnumber"]))
 		self.addAttr("planedHours","Number",row["planedhours"])
+		self.addAttr("actualHours","Number",row["actualhours"])
 		self.addAttr("operationNewStatus","Text",row["operationnewstatus"])
 		self.addAttr("operationOldStatus","Text",row["operationoldstatus"])
 		self.addAttr("statusChangeTS","Text",row["statuschangets"])

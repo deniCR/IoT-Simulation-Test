@@ -1,56 +1,48 @@
 #!/usr/bin/env python3
 
 import sys
-import datetime
+from datetime import datetime 
+import pytz 
+#import pause
 from time import sleep
 
 import Classes.DB_Entities as DB_Entities
 
-def event_simulation(eventDict, time_scale):
+timezone = pytz.timezone('Europe/London')
+
+def event_simulation(eventDict):
 
 	previousTimestemp=0
 	shiftTime=0
 	diff=0
-	scale=time_scale
 	failed=0
 	sucessed=0
 
-	start_event_simulation = datetime.datetime.now()
+	start_event_simulation = datetime.now(timezone)
 
-	for ev in eventDict.values():
-		aux = datetime.datetime.strptime(ev.getTimestamp(), '%Y/%m/%d %H:%M:%S')
-		nextTimestamp = aux.timestamp()
+	for ts,ev in eventDict.items():
+		nextTimestamp = datetime.strptime(ev.getTimestamp(), '%Y/%m/%d %H:%M:%S').timestamp()
 
-		if previousTimestemp != 0:
-			diff = nextTimestamp - previousTimestemp
-			shiftTime = float(diff/scale)
+		print(ev.getTimestamp(),datetime.now(timezone))
 
-		if isinstance(ev, DB_Entities.Operation):
-			if ev.getOldStatus() == 'RUN' and ev.getNewStatus() == "COMPLETE":
-				#cria novo evento de sensores WC - TimeStanp(Before) - progress 100%
-				DB_Entities.insert_sensor_event(ev.getWorkCenterID(),ev.getOperationNumber(),"100",datetime.datetime.now())
-			if ev.getOldStatus() == 'RUN' and ev.getNewStatus() != "COMPLETE":
-				#cria novo evento de sensores WC - TimeStanp(Before) - progress 66%
-				DB_Entities.insert_sensor_event(ev.getWorkCenterID(),ev.getOperationNumber(),"66",datetime.datetime.now())
+		shiftTime = float(nextTimestamp - datetime.now(timezone).timestamp())
 
-		sleep(shiftTime)
+		print(shiftTime)
 
-		ev.setTimestamps(datetime.datetime.now())
-		print(datetime.datetime.now())
+		if(shiftTime>0):
+			sleep(shiftTime)
+		#pause.until(ts)
+
+		#ev.setTimestamps(datetime.datetime.now())
+		#print(datetime.datetime.now())
 		if not(ev.insert()):
 			failed = failed+1
 		else:
 			sucessed = sucessed+1
-
-		if isinstance(ev, DB_Entities.Operation):
-			if (ev.getOldStatus() == 'AVAILABLE' or ev.getOldStatus() == 'SUSPENDED') and ev.getNewStatus() == "RUN":
-				#cria novo evento de sensores WC - TimeStanp(After) - progress 33% ??? e se a operação passa de * -> AVAIABLE ???
-				DB_Entities.insert_sensor_event(ev.getWorkCenterID(),ev.getOperationNumber(),"33",datetime.datetime.now())
-
-		previousTimestemp=nextTimestamp
+			
 		nextTimestamp=0
 
-	end_event_simulation = datetime.datetime.now()
+	end_event_simulation = datetime.now()
 	operations_failed2insert = failed
 	operations_sucessed2insert = sucessed
 
@@ -74,17 +66,18 @@ def main(argv):
 		sys.exit()
 
 	#Read CSV file and prepare DB ...
+	print("Start...")
 	DB_Entities.setStaticEntities(WC_csv,Part_csv)
 
 	#Orders and operation events
-	eventDict = DB_Entities.readCSV(Order_csv,Operation_csv)
+	eventDict,opEventList = DB_Entities.readCSV(Order_csv,Operation_csv)
 
 	keys_list = list(eventDict.keys())
 	actual_start_day = keys_list[0]
 	actual_last_day = keys_list[-1]
 	actual_time = actual_last_day-actual_start_day
 	virtual_time = actual_time/time_scale
-	virtual_start_day = datetime.datetime.now()
+	virtual_start_day = datetime.now()
 	virtual_last_day = virtual_start_day + virtual_time
 
 	print("\nActual interval time: " + str(actual_time))
@@ -98,11 +91,10 @@ def main(argv):
 	print("Expected end of the simulation: " + str(expected_end) + "\n")
 	
 	for key,ev in eventDict.items():
-		if isinstance(ev, DB_Entities.Order):
-			ev.updateDates(virtual_start_day,time_scale)
+		ev.updateDates(actual_start_day,virtual_start_day,time_scale)
 
 	#Event simulation
-	st_ev_sim,end_ev_sim,op_failed2insert,op_sucessed2insert = event_simulation(eventDict, time_scale)
+	st_ev_sim,end_ev_sim,op_failed2insert,op_sucessed2insert = event_simulation(eventDict)
 
 	print("\nEvent simulation start: " + str(st_ev_sim))
 	print("End event simulation: " + str(end_ev_sim))

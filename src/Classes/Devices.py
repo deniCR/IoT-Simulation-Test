@@ -137,7 +137,7 @@ class ProgressSensor(Device):
 		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_3)
 
 		if timeStamp != Null:
-			timeStamp_aux = datetime.strptime(timeStamp, '%Y-%m-%d %H:%M:%S.%f%z')
+			timeStamp_aux = datetime.strptime(timeStamp, '%Y-%m-%d %H:%M:%S%z')
 		else:
 			timeStamp_aux = datetime.now()
 

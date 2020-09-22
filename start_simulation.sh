@@ -21,7 +21,7 @@ workcenter_csv="./src/csv_file/Workcenter.csv"
 partnumber_csv="./src/csv_file/Part.csv"
 order_csv="./src/csv_file/Order.csv"
 operation_csv="./src/csv_file/operations_change_status_alt_7"
-time_scale="3000"
+time_scale="1000"
 
 #Execution
 #./start_fiware
@@ -30,9 +30,9 @@ time_scale="3000"
 
 #Wait for FIWARE to start
 
-./src/delayAnalysis.py > delayAnalysis_log &
+#./src/delayAnalysis.py > delayAnalysis_log &
 
-./src/proxy.py > proxy_log &
+#./src/proxy.py > proxy_log &
 
 #./src/device_simulator.py > device_simulator_log &
 
