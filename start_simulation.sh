@@ -7,11 +7,11 @@ trap "kill -15 0" INT
 export DB_NAME="Fake_MES_DB"
 export DB_USER="client"
 export DB_PASSWORD="123456"
-export DB_IP_ADDRESS="192.168.2.199"
+export DB_IP_ADDRESS="localhost"
 export DB_PORT_ADDRESS="5432"
-export FIWARE_IP_ADDRESS="192.168.2.199"
+export FIWARE_IP_ADDRESS="localhost"
 export FIWARE_PORT_ADDRESS="1026"
-export DELAYANALYSIS_IP_ADDRESS="192.168.2.151"
+export DELAYANALYSIS_IP_ADDRESS="192.168.2.199"
 export DELAYANALYSIS_PORT_ADDRESS="40001"
 #Agent broker ...
 #Agent device  ...
