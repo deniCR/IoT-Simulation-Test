@@ -19,8 +19,8 @@ export DELAYANALYSIS_PORT_ADDRESS="40001"
 
 workcenter_csv="./src/csv_file/Workcenter.csv"
 partnumber_csv="./src/csv_file/Part.csv"
-order_csv="./src/csv_file/Order.csv"
-operation_csv="./src/csv_file/operations_change_status_alt_7"
+order_csv="./src/csv_file/Order_s.csv"
+operation_csv="./src/csv_file/operations_change_status_alt_7_s_s"
 time_scale="1000"
 
 #Execution

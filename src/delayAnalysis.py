@@ -82,18 +82,20 @@ def processProgress(body):
 				ev_ts = r["timeStamp"]
 				op_number = r["operationNumber"]
 
-				print(r)
+				#print(r)
 
 				op = Entities.Operation()
-				_query=("q=workCenter_id==\'" + str(wc_id) + "\';operationNewStatus=='RUN';statusChangeTS>='" + str(ev_ts) + "'&type=Operation&options=keyValues&limit=1&orderBy=!statusChangeTS")
+				_query=("q=workCenter_id==\'" + str(wc_id) + "\';statusChangeTS<='" + str(ev_ts) + "'&type=Operation&options=keyValues&limit=1&orderBy=!statusChangeTS")
 				
+				print(_query)
+
 				if op.get(query=_query):
 
-					newProgress = r["Progress"]
+					actualProgress = r["Progress"]
 					#Update the process state ...
-					print("Operation progress: " + newProgress)
+					print("Operation progress: " + actualProgress)
 					print("Operation expected: " + op_number + " operation query: " + op.getAttrValue("operationNumber"))
-					op.processProgress(newProgress)
+					op.processProgress(actualProgress)
 
 					#Update process state of the Order ...
 					ord_id = op.getOrderID()
@@ -103,7 +105,7 @@ def processProgress(body):
 						ord = Entities.Order()
 
 						if ord.get(entity_id=ord_id):
-							ord.processOperationProcess(op,newProgress)
+							ord.processOperationProcess(op,actualProgress)
 							print(ord)
 					else:
 						print("ORDER_ID IS NONE ::::")

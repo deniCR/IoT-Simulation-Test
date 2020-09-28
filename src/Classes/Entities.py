@@ -380,8 +380,6 @@ class Entity:
 		entity_url = HTTP.entities_url + "/" + self.id
 		atribute_url = entity_url + "/attrs/?options=keyValues"
 
-		print(attrList,newValues)
-
 		# POST can "create" new attrs ... for now the patch is sufficient ... ???
 		HTTP.sendRequest("POST",atribute_url,HTTP.entities_headers,json.dumps(newValues))
 
@@ -506,14 +504,14 @@ class Order(Entity):
 			totalActualHours = 0
 
 		self.addAttr("totalActualHours","Number",float(totalActualHours))
-		self.addAttr("totalNumberOfOperations","Integer",int(row["totalnumberofoperations"]))
+		self.addAttr("totalNumberOfOperations","Number",int(row["totalnumberofoperations"]))
 
 		#Os pedidos a Base de Dados devem ser minimizados na fase de alocação dos dados ???
 		totalNumberOfEndedOperations = DB_Entities.readNumberOfEndedOperations(self.getAttrValue("orderNumber"))
 		if totalNumberOfEndedOperations == None:
 			totalNumberOfEndedOperations = 0
 
-		self.addAttr("totalNumberOfEndedOperations","Integer",int(totalNumberOfEndedOperations))
+		self.addAttr("totalNumberOfEndedOperations","Number",int(totalNumberOfEndedOperations))
 
 		self.addAttr("scheduledDelay","Text","-")
 		self.addAttr("progressDelay","Text","-")
@@ -640,13 +638,13 @@ class Operation(Entity):
 		super().__init__(type="Operation",id=id,name=name,description=description)
 
 	def __str__(self):
-		return ("Operation(Number: " + str(self.getOperationNumber()) + ")")
+		return ("Operation(Number: " + str(self.getOperationNumber()) + ", Order: " + str(self.getOrderNumber()) + ")")
 
 	def loadJsonEntity(self, entity):
 		super().load(entity)
 
 	def getOperationID(self):
-		return self.id[22:]
+		return (str(self.getAttrValue("orderNumber") + str(self.getAttrValue("operationNumber"))))
 
 	def getOperationNumber(self):
 		return self.getAttrValue("operationNumber")
@@ -669,9 +667,11 @@ class Operation(Entity):
 		self.addAttr("actualHours","Number",row["actualhours"])
 		self.addAttr("operationNewStatus","Text",row["operationnewstatus"])
 		self.addAttr("operationOldStatus","Text",row["operationoldstatus"])
-		self.addAttr("statusChangeTS","Text",row["statuschangets"])
+		statusChangeTS = datetime.strptime(row["statuschangets"], '%Y-%m-%d %H:%M:%S.%f%z')
+		self.addAttr("statusChangeTS","Number",statusChangeTS.timestamp())
 		self.addAttr("orderNumber","Text",row["ordernumber"])
 		self.addAttr("progress","Text","-")
+		self.addAttr("actualProgress","Text","-")
 
 	def compareTimeStams(self, other):
 		if self.getTimeStamp() > other.getTimeStamp():
@@ -688,9 +688,10 @@ class Operation(Entity):
 	#			return newStation
 	#	return None
 
-	def processProgress(self, progress):
-		self.setAttr("progress","Text",str(progress))
-		self.updateAttr("progress")
+	def processProgress(self, actualProgress):
+		#expectedProgress = actualHours/plannedHours
+		self.setAttr("actualProgress","Text",str(actualProgress))
+		self.updateAttr("actualProgress")
 
 class Part(Entity):
 	def __init__(self,row):

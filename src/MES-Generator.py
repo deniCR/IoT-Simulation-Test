@@ -18,16 +18,11 @@ def event_simulation(eventDict):
 	failed=0
 	sucessed=0
 
-	start_event_simulation = datetime.now(timezone)
+	start_event_simulation = datetime.now()
 
 	for ts,ev in eventDict.items():
-		nextTimestamp = datetime.strptime(ev.getTimestamp(), '%Y/%m/%d %H:%M:%S').timestamp()
-
-		print(ev.getTimestamp(),datetime.now(timezone))
-
+		nextTimestamp = ev.getTimestamp()
 		shiftTime = float(nextTimestamp - datetime.now(timezone).timestamp())
-
-		print(shiftTime)
 
 		if(shiftTime>0):
 			sleep(shiftTime)
@@ -73,8 +68,8 @@ def main(argv):
 	eventDict,opEventList = DB_Entities.readCSV(Order_csv,Operation_csv)
 
 	keys_list = list(eventDict.keys())
-	actual_start_day = keys_list[0]
-	actual_last_day = keys_list[-1]
+	actual_start_day = datetime.fromtimestamp(keys_list[0])
+	actual_last_day = datetime.fromtimestamp(keys_list[-1])
 	actual_time = actual_last_day-actual_start_day
 	virtual_time = actual_time/time_scale
 	virtual_start_day = datetime.now()

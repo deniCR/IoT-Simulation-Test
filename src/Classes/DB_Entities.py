@@ -1,9 +1,11 @@
 import csv
 import psycopg2
-import datetime
+from datetime import datetime 
 import simplejson as json
 from psycopg2.extras import RealDictCursor
 import os
+from termcolor import colored
+
 
 from . import Entities
 from . import Devices
@@ -11,21 +13,22 @@ from . import Devices
 conn = psycopg2.connect("dbname=" + os.environ['DB_NAME'] + " user=" + os.environ['DB_USER'] + " password=" + os.environ['DB_PASSWORD'] + " host=" + os.environ['DB_IP_ADDRESS'] + " port=" + os.environ['DB_PORT_ADDRESS'])
 
 # Read all events from the order and operation files
-def readCSV(order,operation):
+def readCSV(order_csv_file,operation_csv_file):
 	eventDict = {}
 
-	with open(order, mode='r') as csv_file:
+	with open(order_csv_file, mode='r') as csv_file:
 		order_dict = csv.DictReader(csv_file)
 		for row in order_dict:
-			ts = datetime.datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S')
+			ts = (datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S')).timestamp()
 			eventDict.update({ts: Order(row)})
 
 	opEventList={}
+	opTotalHours = {}
 
-	with open(operation, mode='r') as csv_file:
+	with open(operation_csv_file, mode='r') as csv_file:
 		operation_dict = csv.DictReader(csv_file)
 		for row in operation_dict:
-			ts = datetime.datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S')
+			ts = (datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S')).timestamp()
 			op = Operation(row)
 			eventDict.update({ts: op})
 
@@ -34,21 +37,26 @@ def readCSV(order,operation):
 
 			if not(orderNumber in opEventList):
 				opEventList.update({orderNumber: {}})
+				opTotalHours.update({orderNumber: {}})
 
 			if not(operationNumber in opEventList[orderNumber]):
 				opEventList[orderNumber].update({operationNumber: {}})
+				opTotalHours[orderNumber].update({operationNumber: 0})
 
 			opEventList[orderNumber][operationNumber].update({ts: op})
 
 		sensorEvents = {}
 
-		#Set totalHours per operation and sensorEvents
+		#Set actual totalHours per operation
 		for orderN in opEventList:
 			for operationN in opEventList[orderN]:
 				totalHours = 0.0
 				runStart = None
 				runEnd = None
 				prevEventTS = None
+
+				opEventList[orderN][operationN] = dict(sorted(opEventList[orderN][operationN].items(), key=lambda item: item[0]))
+
 				for ts,opEvent in opEventList[orderN][operationN].items():
 					if opEvent.getNewStatus() == "RUN":
 						runStart = ts
@@ -56,15 +64,42 @@ def readCSV(order,operation):
 						runEnd = ts
 						if runStart!=None:
 							diff = runEnd - runStart
-							totalHours += float(diff.total_seconds()/3600)
+							totalHours += float(diff/3600)
 							opEvent.setActualHours(totalHours)
-							eventTS = prevEventTS + (ts - prevEventTS)/2
-							hoursBefEvent = float(((ts-prevEventTS).total_seconds()/2)/3600)
-							newSensorEvent = SensorEvent(opEvent,eventTS,hoursBefEvent,totalHours)
+							opTotalHours[orderN][operationN]=totalHours
+						else:
+							runEnd = None
+					prevEventTS = ts
+
+		#Create Sensor events
+		for orderN in opEventList:
+			for operationN in opEventList[orderN]:
+				totalHours = opTotalHours[orderN][operationN]
+				runStart = None
+				runEnd = None
+				prevEventTS = None
+
+				for ts,opEvent in opEventList[orderN][operationN].items():
+					if opEvent.getNewStatus() == "RUN":
+						runStart = ts
+					if opEvent.getOldStatus() == "RUN":
+						runEnd = ts
+						if runStart!=None:
+							eventTS = (prevEventTS + (ts - prevEventTS)/3)
+							hoursBefEvent = float(((ts-prevEventTS)/3)/3600)
+							newSensorEvent = SensorEvent(opEvent,eventTS,(-hoursBefEvent),totalHours)
 							sensorEvents.update({eventTS: newSensorEvent})
 						else:
 							runEnd = None
 					prevEventTS = ts
+
+	sensorEvents = dict(sorted(sensorEvents.items(), key=lambda item: item[0]))
+
+	print(sensorEvents.keys())
+
+	print("\n\n\n\n\n\n\n\n\n\n")
+
+	print(eventDict.keys())
 
 	eventDict = {**sensorEvents,**eventDict}
 
@@ -199,14 +234,14 @@ class Order():
 		self.partNumber = row["PN"]
 		if row["SCHEDULE_START_DATE"][0] != ' ':
 			self.scheduledStartDate = row["SCHEDULE_START_DATE"]
-			#self.scheduledStartDate = datetime.datetime.strptime(row["SCHEDULE_START_DATE"], '%Y/%m/%d %H:%M:%S')
+			#self.scheduledStartDate = datetime.strptime(row["SCHEDULE_START_DATE"], '%Y/%m/%d %H:%M:%S')
 		else:
 			self.scheduledStartDate = None
 		self.scheduledEndDate = None
 		
 		if row["ACTUAL_START_DATE"][0] != ' ':
 			self.actualStart = row["ACTUAL_START_DATE"]
-			#self.actualStart = datetime.datetime.strptime(row["ACTUAL_START_DATE"], '%Y/%m/%d %H:%M:%S')
+			#self.actualStart = datetime.strptime(row["ACTUAL_START_DATE"], '%Y/%m/%d %H:%M:%S')
 		else:
 			self.actualStart = None
 
@@ -217,7 +252,7 @@ class Order():
 		self.totalPlanedHours = row["TOTAL_HOURS"]
 		self.totalNumberOfOperations = row["TOTAL_OPS"]
 		self.site = row["SITE"]
-		self.statusChangeTS = row ["STATUS_CHANGE_TS"]
+		self.statusChangeTS = datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S').timestamp()
 
 	def getPartID(self):
 		with conn.cursor() as cur:
@@ -245,18 +280,16 @@ class Order():
 
 	def updateDates(self,first_event,start_day,scale):
 		if self.scheduledStartDate!=None:
-			scheduledStartDate = datetime.datetime.strptime(self.scheduledStartDate, '%Y/%m/%d %H:%M:%S')
+			scheduledStartDate = datetime.strptime(self.scheduledStartDate, '%Y/%m/%d %H:%M:%S')
 			diff = scheduledStartDate - first_event
 			sum = start_day+diff/scale
 			self.scheduledStartDate = sum.strftime('%Y/%m/%d %H:%M:%S')
-			print(self.scheduledStartDate)
 
 		if self.actualStart != None:
-			actualStart = datetime.datetime.strptime(self.actualStart, '%Y/%m/%d %H:%M:%S')
+			actualStart = datetime.strptime(self.actualStart, '%Y/%m/%d %H:%M:%S')
 			diff = actualStart - first_event
 			sum = start_day+diff/scale
 			self.actualStart = sum.strftime('%Y/%m/%d %H:%M:%S')
-			print(self.actualStart)
 
 		if self.totalPlanedHours!=None:
 			self.totalPlanedHours = float(self.totalPlanedHours)/scale
@@ -265,11 +298,9 @@ class Order():
 			self.planedHours = float(self.planedHours)/scale
 
 		if self.statusChangeTS != None:
-			statusChangeTS = datetime.datetime.strptime(self.statusChangeTS, '%Y/%m/%d %H:%M:%S')
-			diff = statusChangeTS - first_event
-			sum = start_day+diff/scale
-			self.statusChangeTS = sum.strftime('%Y/%m/%d %H:%M:%S')
-			print(self.statusChangeTS)
+			statusChangeTS = self.statusChangeTS
+			diff = statusChangeTS - first_event.timestamp()
+			self.statusChangeTS = int(start_day.timestamp()+diff/scale)
 
 	def update(self,attr,value):
 		with conn.cursor() as cur:
@@ -283,14 +314,14 @@ class Order():
 
 	def insert(self):
 		if(self.orderNumber.isdigit()):
-			print("INSER ORDER: " + self.orderNumber)
+			print(colored("INSERT ORDER: ","green") + self.orderNumber)
 			with conn.cursor() as cur:
 				cur.execute("""INSERT INTO order_status_changes VALUES 
 					(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 					""",(self.orderNumber,self.currentOperation,self.partNumber,self.part_id,
 						self.orderNewStatus,self.orderOldStatus,self.planedHours,self.scheduledStartDate,
 						self.scheduledEndDate,self.actualStart,self.actualEnd,self.site,self.totalPlanedHours,
-						self.totalNumberOfOperations,self.statusChangeTS))
+						self.totalNumberOfOperations,datetime.fromtimestamp(self.statusChangeTS)))
 
 			conn.commit()
 			return True
@@ -298,12 +329,12 @@ class Order():
 			return False
 
 class SensorEvent():
-	def __init__(self,opEvent,timestamp,hoursBefEvent,totalHours):
+	def __init__(self,opEvent,timestamp,hoursAftEvent,totalHours):
 		self.workcenter=opEvent.getWorkCenterID()
 		self.operationNumber=opEvent.getOperationNumber()
 		self.timestamp = timestamp
 
-		opActualHours=opEvent.getActualHours()-hoursBefEvent
+		opActualHours=opEvent.getActualHours()+hoursAftEvent
 		opTotalHours=totalHours
 		self.percentage = (opActualHours/opTotalHours)*100
 
@@ -311,16 +342,16 @@ class SensorEvent():
 
 		if self.timestamp != None:
 			timestamp = self.timestamp
-			diff = timestamp - first_event
-			sum = start_day+diff/scale
-			self.timestamp = sum.strftime('%Y/%m/%d %H:%M:%S')
+			diff = timestamp - first_event.timestamp()
+			sum_time = start_day.timestamp()+diff/scale
+			self.timestamp = sum_time
 
 	def getTimestamp(self):
 		return self.timestamp
 
 	def insert(self):
 		with conn.cursor() as cur:
-			cur.execute("""INSERT INTO sensor_events VALUES (%s, %s, %s, %s)""",(self.workcenter,self.operationNumber,self.percentage,self.timestamp,))
+			cur.execute("""INSERT INTO sensor_events VALUES (%s, %s, %s, %s)""",(self.workcenter,self.operationNumber,self.percentage,datetime.fromtimestamp(self.timestamp,)))
 		conn.commit()
 		return True
 
@@ -368,7 +399,24 @@ class Operation():
 			if order_id != None:
 				self.order_id = order_id[0]
 			else:
-				self.order_id = None
+				#self.order_id = None
+				#create new order with order_id == self.order ...
+				data = {}
+				data.update({"ORDER_ID": self.order})
+				data.update({"NEW_STATUS": "-"})
+				data.update({"OLD_STATUS": "-"})
+				data.update({"SCHEDULE_START_DATE": " "})
+				data.update({"PN": "-"})
+				data.update({"ACTUAL_START_DATE": " "})
+				data.update({"PLANNED_DURATION": 0})
+				data.update({"TOTAL_HOURS": 0})
+				data.update({"TOTAL_OPS": 1})
+				data.update({"SITE": "-"})
+				order_ts = datetime.now()
+				data.update({"STATUS_CHANGE_TS": datetime.strftime(order_ts, '%Y/%m/%d %H:%M:%S')})
+
+				newOrder = Order(data)
+				newOrder.insert()
 
 		opHours = row["PLANNED_DURATION"]
 		if not(opHours.isdigit()):
@@ -382,7 +430,7 @@ class Operation():
 		
 		self.planedHours = float(opHours)
 		#self.statusChangeTS = row ["STATUS_CHANGE_TS"]
-		self.statusChangeTS = datetime.datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S')
+		self.statusChangeTS = datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S').timestamp()
 
 	def updateDates(self,first_event,start_day,scale):
 
@@ -394,10 +442,8 @@ class Operation():
 
 		if self.statusChangeTS != None:
 			statusChangeTS = self.statusChangeTS
-			diff = statusChangeTS - first_event
-			sum = start_day+diff/scale
-			self.statusChangeTS = sum.strftime('%Y/%m/%d %H:%M:%S')
-			print(self.statusChangeTS,start_day)
+			diff = statusChangeTS - first_event.timestamp()
+			self.statusChangeTS = start_day.timestamp()+diff/scale
 
 	def getOrderID(self):
 		return self.id[:18]
@@ -463,17 +509,17 @@ class Operation():
 
 		if(self.order_id != None and self.operation_id.isdigit()):
 
-			print("INSERT OPERATION: " + self.operation_id)
+			print(colored("INSERT OPERATION: ","green") + self.operation_id)
 
 			with conn.cursor() as cur:
 				cur.execute("""INSERT INTO operation_status_changes VALUES 
 						(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 						""",(self.operation_id,self.workcenter,self.workcenter_id,self.order,self.order_id,self.description,
-							self.operationNewStatus,self.operationOldStatus,"{:.4f}".format(self.planedHours),"{:.4f}".format(self.actualHours),self.statusChangeTS))
+							self.operationNewStatus,self.operationOldStatus,"{:.4f}".format(self.planedHours),"{:.4f}".format(self.actualHours),datetime.fromtimestamp(self.statusChangeTS)))
 			conn.commit()
 			return True
 		else:
-			print("Failde to insert Operations: " + self.operation_id)
+			print(colored("Failde to insert Operations: ","red") + self.operation_id)
 
 		return False
 
@@ -563,6 +609,7 @@ def collectKnownOrders(knownOrders, time):
 
 	return OrderList
 
+# Completed or canceled operations are ignored
 def readNewOperation(orderNumber, known_Operations, time):
 	OperationList = {}
 	with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -572,9 +619,9 @@ def readNewOperation(orderNumber, known_Operations, time):
 			known_Ops = known_Operations[orderNumber]
 
 		if known_Ops != None:
-			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " seconds') AND operationnumber NOT IN " + known_Ops + " AND ordernumber = '" + str(orderNumber) + "' ORDER BY statuschangets desc;")
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " seconds') AND operationnumber NOT IN " + known_Ops + " AND (operationnumber NOT IN (SELECT operations_ended('" + str(orderNumber) + "'))) AND ordernumber = '" + str(orderNumber) + "' ORDER BY statuschangets desc;")
 		else:
-			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " seconds') AND ordernumber = '" + str(orderNumber) + "' ORDER BY statuschangets desc;")
+			cur.execute("SELECT * FROM operation_status_changes WHERE statuschangets >= (NOW() - interval '" + str(time) + " seconds') AND ordernumber = '" + str(orderNumber) + "' AND (operationnumber NOT IN (SELECT operations_ended('" + str(orderNumber) + "'))) ORDER BY statuschangets desc;")
 		data = cur.fetchall()
 
 		for operation in data:
@@ -624,14 +671,6 @@ def collectKnownOperations(orderNumber, known_Operations, time):
 				OperationList.update({operationNumber: op})
 
 	return OperationList
-
-def readNumberOfTotalOperations(orderNumber):
-	data = None
-	with conn.cursor(cursor_factory=RealDictCursor) as cur:
-		cur.execute("SELECT numberoftotaloperations(%s);",(str(orderNumber),))
-		data = cur.fetchone()["numberoftotaloperations"]
-
-	return data
 
 def readNumberOfEndedOperations(orderNumber):
 	data = None

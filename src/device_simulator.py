@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 
 from time import sleep
+from datetime import datetime
+import pytz 
+
 
 import Classes.Entities as Entities
 import Classes.DB_Entities as DB_Entities
+
+timezone = pytz.timezone('Europe/London')
 
 fiware = "http://orion:1026"
 protocol = "PDI-IoTA-UltraLight"
@@ -26,10 +31,16 @@ def main():
 			lastID = list(sensor_ev_list.keys())[-1]
 
 		for sensor_ev in sensor_ev_list.values():
-			sleep(0.1)
 			#register if the sensor doesn't exist in the broker
 			if(not(sensor_ev.exists())):
 				sensor_ev.provision()
+			
+			nextTimestamp = sensor_ev.getTimeStamp()
+			shiftTime = float(nextTimestamp - datetime.now(timezone).timestamp())
+
+			if(shiftTime>0):
+				sleep(shiftTime)
+
 			#Wait until proper TS ...
 			sensor_ev.sendData()
 

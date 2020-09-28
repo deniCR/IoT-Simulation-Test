@@ -2,6 +2,7 @@
 
 import signal
 import os
+from time import sleep
 
 import Classes.Entities as Entities
 import Classes.DB_Entities as DB_Entities
@@ -14,7 +15,7 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-def collectNewEvents(known_Orders, known_Operations, time):
+def collectNewEvents(known_ordersList, known_Orders, known_Operations, time):
 	newList = DB_Entities.readNewOrders(known_Orders, time)
 
 	orderProvioned = 0
@@ -27,6 +28,12 @@ def collectNewEvents(known_Orders, known_Operations, time):
 			operationsProvisioned = operationsProvisioned +1
 		order.provision()
 		orderProvioned = orderProvioned +1
+
+	for orderNumber in known_ordersList.keys():
+		opList = DB_Entities.readNewOperation(orderNumber, known_Operations, time)
+		for op in opList.values():
+			op.provision()
+			operationsProvisioned = operationsProvisioned +1
 
 	return orderProvioned,operationsProvisioned
 
@@ -78,7 +85,7 @@ def main():
 			part.provision()
 			del part
 
-		time = 360 #Events from the last T seconds in real time
+		time = 720 #Events from the last T seconds in real time
 
 		#time = int(time/float(os.environ("TIME_SCALE")))
 
@@ -86,7 +93,7 @@ def main():
 		known_ordersList, known_Orders = Entities.getRunningOrders()
 		known_operationList, known_Operations = Entities.getRunningOperations()
 
-		aux_orderProvioned,aux_operationsProvisioned = collectNewEvents(known_Orders, known_Operations, time)
+		aux_orderProvioned,aux_operationsProvisioned = collectNewEvents(known_ordersList,known_Orders, known_Operations, time)
 		aux_orderUpdated,aux_operationsUpdated = updateKnownEntities(known_Orders, known_ordersList, known_Operations, known_operationList, time)
 
 		orderProvioned = orderProvioned + aux_orderProvioned

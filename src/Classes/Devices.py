@@ -137,7 +137,7 @@ class ProgressSensor(Device):
 		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_3)
 
 		if timeStamp != Null:
-			timeStamp_aux = datetime.strptime(timeStamp, '%Y-%m-%d %H:%M:%S%z')
+			timeStamp_aux = datetime.strptime(timeStamp, '%Y-%m-%d %H:%M:%S.%f%z')
 		else:
 			timeStamp_aux = datetime.now()
 
@@ -145,6 +145,7 @@ class ProgressSensor(Device):
 		static_attributes_4["name"] = "timeStamp"
 		static_attributes_4["type"] = "Numeric"
 		static_attributes_4["value"] = timeStamp_aux.timestamp()
+		self.timestamp = timeStamp_aux.timestamp()
 
 		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_4)
 
@@ -154,6 +155,9 @@ class ProgressSensor(Device):
 			return True
 		else:
 			return False
+
+	def getTimeStamp(self):
+		return self.timestamp
 
 	def sendData(self):
 		print("Deive: " + self.id + " progress: " + str(self.progress))
