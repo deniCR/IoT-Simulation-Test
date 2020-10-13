@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import signal
-import os
 from time import sleep
 
 import Classes.Entities as Entities
@@ -15,14 +14,14 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-def collectNewEvents(known_ordersList, known_Orders, known_Operations, time):
-	newList = DB_Entities.readNewOrders(known_Orders, time)
+def readNewEvents(known_ordersList, known_OrdersIDs, known_OperationsIDs, knownEnded_OperationsIDs, time):
+	newList = DB_Entities.readNewOrders(known_OrdersIDs, time)
 
 	orderProvioned = 0
 	operationsProvisioned = 0
 
 	for orderNumber, order in newList.items():
-		opList = DB_Entities.readNewOperation(orderNumber, known_Operations, time)
+		opList = DB_Entities.readNewOperation(orderNumber, known_OperationsIDs, knownEnded_OperationsIDs, time)
 		for op in opList.values():
 			op.provision()
 			operationsProvisioned = operationsProvisioned +1
@@ -30,15 +29,15 @@ def collectNewEvents(known_ordersList, known_Orders, known_Operations, time):
 		orderProvioned = orderProvioned +1
 
 	for orderNumber in known_ordersList.keys():
-		opList = DB_Entities.readNewOperation(orderNumber, known_Operations, time)
+		opList = DB_Entities.readNewOperation(orderNumber, known_OperationsIDs, knownEnded_OperationsIDs, time)
 		for op in opList.values():
 			op.provision()
 			operationsProvisioned = operationsProvisioned +1
 
 	return orderProvioned,operationsProvisioned
 
-def updateKnownEntities(known_Orders, known_ordersList, known_Operations, known_operationList, time):
-	updateList = DB_Entities.collectKnownOrders(known_Orders, time)
+def updateKnownEntities(known_OrdersIDs, known_ordersList, known_OperationsIDs, known_operationList, time):
+	updateList = DB_Entities.readKnownOrders(known_OrdersIDs, time)
 
 	orderUpdated = 0
 	operationsUpdated = 0
@@ -48,7 +47,7 @@ def updateKnownEntities(known_Orders, known_ordersList, known_Operations, known_
 			updateList[orderNumber].update()
 			orderUpdated = orderUpdated +1
 
-		opList = DB_Entities.collectKnownOperations(orderNumber, known_Operations, time)
+		opList = DB_Entities.readKnownOperations(orderNumber, known_OperationsIDs, time)
 		for opN, op in opList.items():
 			if (orderNumber in known_operationList) and known_operationList[orderNumber] != None and (opN in known_operationList[orderNumber] and (op.compareTimeStams(known_operationList[orderNumber][opN]))):
 				op.update()
@@ -65,8 +64,15 @@ def main():
 	orderUpdated = 0
 	operationsUpdated = 0
 
-	while not(stop):
+	#Debug
+	test_info = None
+	while test_info == None:
+		sleep(1)
+		test_info = DB_Entities.readTestInfo()
+	test_info.provision()
 
+	while not(stop):
+		sleep(0.1)
 		#GET Known work centers from the broker
 		# - There are no updates to this entities ...
 		known_WorkCenters = Entities.getWorkCenters()
@@ -90,11 +96,12 @@ def main():
 		#time = int(time/float(os.environ("TIME_SCALE")))
 
 		#GET Known Orders and Operations from the broker
-		known_ordersList, known_Orders = Entities.getRunningOrders()
-		known_operationList, known_Operations = Entities.getRunningOperations()
+		known_ordersList, known_OrdersIDs = Entities.getRunningOrders()
+		known_operationList, known_OperationsIDs = Entities.getRunningOperations()
+		knownEnded_operationList, knownEnded_OperationsIDs = Entities.getEndedOperations()
 
-		aux_orderProvioned,aux_operationsProvisioned = collectNewEvents(known_ordersList,known_Orders, known_Operations, time)
-		aux_orderUpdated,aux_operationsUpdated = updateKnownEntities(known_Orders, known_ordersList, known_Operations, known_operationList, time)
+		aux_orderProvioned,aux_operationsProvisioned = readNewEvents(known_ordersList,known_OrdersIDs, known_OperationsIDs, knownEnded_OperationsIDs, time)
+		aux_orderUpdated,aux_operationsUpdated = updateKnownEntities(known_OrdersIDs, known_ordersList, known_OperationsIDs, known_operationList, time)
 
 		orderProvioned = orderProvioned + aux_orderProvioned
 		operationsProvisioned = operationsProvisioned + aux_operationsProvisioned

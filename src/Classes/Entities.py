@@ -4,10 +4,7 @@ from datetime import datetime
 
 from . import HTTPCommands as HTTP
 
-import Classes.DB_Entities as DB_Entities
-
 Null = "Null"
-DateTimeFormat = "%Y-%m-%d %H:%M:%S.%f%z"
 
 def getWorkCenters():
 	query = HTTP.entities_url + "/?type=WorkCenter&options=keyValues&attrs=id&limit=1000"
@@ -138,6 +135,54 @@ def getRunningOperations():
 
 	return operationList,strings
 
+def getEndedOperations():
+	query = HTTP.entities_url + "/?q=operationNewStatus=='COMPLETE','CANCELLED'&type=Operation&options=keyValues,count&limit=100"
+
+	numberOfEntities = 1
+	numberOfOperations = 0
+	json_entity = {}
+	operationList = {}
+	offSet="0"
+
+	while numberOfOperations < numberOfEntities:
+		offSet = str(numberOfOperations)
+
+		response,headers = HTTP.sendRequest("GET",query + "&offset=" + offSet,HTTP.headers_get_iot)
+
+		if "Fiware-Total-Count" in headers:
+			numberOfEntities=int(headers["Fiware-Total-Count"])
+
+		if response != None:
+			json_entity = json.loads(response)
+
+		for o in json_entity:
+			operation = Operation()
+			operation.loadJsonEntity(o)
+			orderNumber = operation.getOrderNumber()
+			operationNumber = operation.getOperationID()
+
+			if not orderNumber in operationList:
+				operationList.update({orderNumber: {}})
+
+			if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
+				operationList[orderNumber].update({operationNumber: (operation)})
+				numberOfOperations = numberOfOperations + 1
+
+	strings = {}
+
+	if len(operationList) > 0:
+		for orderN in operationList:
+			string = None
+			if len(operationList[orderN]) > 0:
+				string = "("
+				for o in operationList[orderN].values():
+					string = string + "'" + o.getOperationNumber() + "', "
+
+				string = string[:-2] + ")"
+			strings.update({orderN: string})
+
+	return operationList,strings
+
 #The delete function deletes the entity from the broker 
 def deleteEntity(entity_id):
 	entity_url = HTTP.entities_url + "/" + entity_id
@@ -164,7 +209,6 @@ class Service():
 		self.json_entity["services"].append(service)
 
 	def provision(self):
-		print(self.json_entity)
 		if not(self.exists()):
 			url = self.services_url
 			print("Service provision: " + self.apikey)
@@ -303,16 +347,28 @@ class Entity:
 			self.json_entity.pop(l, None)
 
 	#The get function will copy the data hold by the broker and load the Entity
-	def get(self, entity_id=Null, query=Null):
+	def getEntity(self, entity_id=Null):
 		if entity_id != Null:
 			self.id = entity_id
 			entity_url = HTTP.entities_url + "/" + self.id
+
+		response,headers = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
+
+		response_json = json.loads(response)
+
+		if len(response_json)>0 and 'error' not in response_json and 'id' in response_json:
+			self.load(response_json)
+			return True
 		else:
-			if query != Null:
-				entity_url = HTTP.entities_url + "/?"
-				entity_url = entity_url + query
-			else:
-				return False
+			return False
+
+	#The get function will copy the data hold by the broker and load the Entity
+	def get(self, query=Null):
+		if query != Null:
+			entity_url = HTTP.entities_url + "/?"
+			entity_url = entity_url + query
+		else:
+			return False
 
 		response,headers = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
 
@@ -320,7 +376,7 @@ class Entity:
 
 		print(response_json)
 
-		if len(response_json)>0 and 0 in response_json and "type" in response_json[0]:
+		if len(response_json)>0 and 'error' not in response_json and "id" in response_json[0]:
 			self.load(response_json[0])
 			return True
 		else:
@@ -418,36 +474,9 @@ class Entity:
 
 		return True
 
-class Worker(Entity):
-	def __init__(self,id=Null, name=Null, rfidCode=Null, description=Null):
-		super().__init__(type="Worker",id=id,name=name,description=description)
-		self.addAttr("rfidCode","Text",rfidCode)
-		self.entity_rfidCode = rfidCode
-
-	def getRFIDCode(self):
-		return self.entity_rfidCode
-
-	#Get the worker information form the broker through the respective rfidCode
-	def getByRFIDCode(self, rfidCode):
-		entity_url = HTTP.entities_url + "/?type=Worker&q=rfidCode=='" +rfidCode+ "'&options=keyValues&attrs=." 
-
-		response,headers = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
-		json_response = json.loads(response)
-
-		if len(json_response) > 0:
-			if "id" in json_response[0]:
-				worker_ref = json_response[0]["id"]
-				self.get(worker_ref)
-				return True
-
-		return False
-
-	def __str__(self):
-		return "Worker: " + str(self.id) + " - " + self.entity_rfidCode
-
 class Order(Entity):
 	def __init__(self,id=Null,name=Null,description=Null):
-		super().__init__(type="Order",id=id,name=name,description=description)
+		super().__init__(type="Order",id=id,name=name,description="description")
 
 	def __str__(self):
 		return ("Order(Number: " + self.getOrderNumber() + ")")
@@ -465,12 +494,11 @@ class Order(Entity):
 		return self.getAttrValue("statusChangeTS")
 
 	def loadDBEntry(self, row):
-		super().__init__(type="Order",id=str(row["ordernumber"]),name="Order",description=Null)
-		self.addAttr("order_id","Text",row["id"])
+		super().__init__(type="Order",id=str(row["ordernumber"]),name="Order",description="description")
+		#self.addAttr("order_id","Text",row["id"])
 		self.addAttr("orderNumber","Text",str(row["ordernumber"]))
 		self.addAttr("partNumber","Text",row["partnumber"])
 		self.addAttr("site","Text",row["site"])
-		self.addAttr("planedHours","Number",row["planedhours"])
 		if row["scheduledstart"] == None:
 			self.addAttr("scheduledStart","Number",0)
 		else:
@@ -492,35 +520,36 @@ class Order(Entity):
 		else:
 			actualend = datetime.strptime(row["actualend"], '%Y-%m-%d %H:%M:%S.%f%z')
 			self.addAttr("actualEnd","Number",actualend.timestamp())
-		self.addAttr("orderNewStatus","Text",row["ordernewstatus"])
+		orderNewStatus = row["ordernewstatus"]
+		self.addAttr("orderNewStatus","Text",orderNewStatus)
 		self.addAttr("orderOldStatus","Text",row["orderoldstatus"])
 		statusChangeTS = datetime.strptime(row["statuschangets"], '%Y-%m-%d %H:%M:%S%z')
 		self.addAttr("statusChangeTS","Number",statusChangeTS.timestamp())
-		self.addAttr("totalPlanedHours","Number",float(row["totalplanedhours"]))
+		self.addAttr("plannedHours","Number",float(row["plannedhours"]))
 
-		#Os pedidos a Base de Dados devem ser minimizados na fase de alocação dos dados ???
-		totalActualHours = DB_Entities.readTotalActualHours(self.getAttrValue("orderNumber"))
-		if totalActualHours == None:
-			totalActualHours = 0
+		totalHours = row["totalhours"]
+		if totalHours == None:
+			totalHours = 0
+		self.addAttr("totalHours","Number",float(totalHours))
 
-		self.addAttr("totalActualHours","Number",float(totalActualHours))
-		self.addAttr("totalNumberOfOperations","Number",int(row["totalnumberofoperations"]))
+		currentHours = row["currenthours"]
 
-		#Os pedidos a Base de Dados devem ser minimizados na fase de alocação dos dados ???
-		totalNumberOfEndedOperations = DB_Entities.readNumberOfEndedOperations(self.getAttrValue("orderNumber"))
-		if totalNumberOfEndedOperations == None:
-			totalNumberOfEndedOperations = 0
-
-		self.addAttr("totalNumberOfEndedOperations","Number",int(totalNumberOfEndedOperations))
+		if orderNewStatus in ("COMPLETE","CANCELLED"): #Change in the Generator ...
+			currentHours = totalHours
+		if currentHours!=None:
+			self.addAttr("currentHours","Number",float(currentHours))
 
 		self.addAttr("scheduledDelay","Text","-")
 		self.addAttr("progressDelay","Text","-")
+
+		updateTS = datetime.strptime(row["updatets"], '%Y-%m-%d %H:%M:%S.%f%z')
+		self.addAttr("updateTS","Number",updateTS.timestamp())
 
 	def processDelay(self):
 		self.processScheduleDelay()
 		self.processProgressDelay()
 
-		attrList = ["scheduledDelay","progress","progressDelay"]
+		attrList = ["scheduledDelay","progressDelay","expectedProgress","actualProgress"]
 		self.updateAttrList(attrList)
 
 	def processScheduleDelay(self):
@@ -546,51 +575,82 @@ class Order(Entity):
 				self.setAttr("scheduledDelay","Indeterminate")
 
 	def processProgressDelay(self):
-		#All the operation already completed that are related to the order ...
-		entity_url = HTTP.entities_url + "/?q=order_id=='" + self.getAttrValue("id")[18:] + "';operationStatus=='COMPLETED'&type=Operation&attrs=planedHours,actualHours&options=keyValues" 
+		plannedHours = self.getAttrValue("plannedHours")
+		currentHours = self.getAttrValue("currentHours")
+		totalHours = self.getAttrValue("totalHours")
 
-		response,headers = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
-
-		totalPlanedHours = self.getAttrValue("totalPlanedHours")
-		totalActualHours = self.getAttrValue("totalActualHours")
-
-		#Compare expected time with actual time until now/ time spent in any completed operation until now ... 
-		#ADVANCED(<-5%), NORMAL(+/- 5%) and DELAYED(>+5%) are the 3 states of delay
-		if totalActualHours < totalPlanedHours*0.95:
-			self.setAttr("progressDelay","ADVANCED")
+		if totalHours > 0:
+			actualProgress = int(currentHours/totalHours*100)
 		else:
-			if totalActualHours > totalPlanedHours*0.95 and totalActualHours < totalPlanedHours*1.05:
-				self.setAttr("progressDelay","NORMAL")
+			actualProgress = 0
+
+		if plannedHours>0:
+			expectedProgress = int(currentHours/plannedHours*100)
+			if actualProgress > expectedProgress*1.05:
+				self.setAttr(name="progressDelay",value="ADVANCED",type="Text")
 			else:
-				self.setAttr("progressDelay","DELAYED")
-
-		progress = None
-
-		if totalActualHours>0 and totalPlanedHours>0:
-			progress = int((totalActualHours/totalPlanedHours)*100)
-
-		if progress != None:
-			self.setAttr("progress",progress)
+				if actualProgress < expectedProgress*0.95:
+					self.setAttr(name="progressDelay",value="DELAYED",type="Text")
+				else:
+					self.setAttr(name="progressDelay",value="NORMAL",type="Text")
 		else:
-			self.setAttr("progress",0)
+			expectedProgress = 0
+			self.setAttr(name="progressDelay",value="Indeterminate",type="Text")
 
-	def processOperationProcess(self, op, _progress):
+		self.setAttr(name="expectedProgress",value=expectedProgress,type="Number")
+		self.setAttr(name="actualProgress",value=actualProgress,type="Number")
+
+	def processOperationProgress(self, op, _progress, ts):
 		self.setAttr("currentOperation",op.getOperationNumber())
 
-		op_planed_hours = op.getAttrValue("planedHours")
+		op_planned_hours = float(op.getAttrValue("totalHours"))
+		op_actual_hours = float(_progress*op_planned_hours/100)
 
-		totalPlanedHours = self.getAttrValue("totalPlanedHours")
-		totalActualHours = self.getAttrValue("totalActualHours") + float(int(_progress)/100)*op_planed_hours
+		plannedHours = float(self.getAttrValue("plannedHours"))
+		currentHours = float(self.getAttrValue("currentHours"))
+		totalHours = float(self.getAttrValue("totalHours"))
+		actualProgress = float(self.getAttrValue("actualProgress"))
 
-		progress = None
+		_currentHours = currentHours + op_actual_hours
+		
+		if totalHours > 0:
+			_actualProgress = int(currentHours/totalHours*100)
+		else:
+			_actualProgress = 0
 
-		if totalActualHours>0 or self.getAttrValue("orderNewStatus") == "RUN":
-			progress = int((totalActualHours/totalPlanedHours)*100)
+		#Cases that can occur with the aggregation of actualHours from the operations
+		if actualProgress > _actualProgress or _actualProgress > 100:
+			_actualProgress = actualProgress
+			_currentHours = currentHours
+		#else:
+			#self.setAttr(name="currentHours",value=_currentHours,type="Number")
 
-		if progress != None:
-			self.setAttr("progress",progress)
+		expectedProgress = None
 
-		attrList = ["currentOperation","progress"]
+		if plannedHours<=0:
+			expectedProgress=0
+			self.setAttr(name="progressDelay",value="Indeterminate",type="Text")
+		else:
+			expectedProgress = int(_currentHours/plannedHours*100)
+			if _actualProgress > expectedProgress*1.05:
+				self.setAttr(name="progressDelay",value="ADVANCED",type="Text")
+			else:
+				if _actualProgress < expectedProgress*0.95:
+					self.setAttr(name="progressDelay",value="DELAYED",type="Text")
+				else:
+					self.setAttr(name="progressDelay",value="NORMAL",type="Text")
+
+		self.setAttr("expectedProgress",expectedProgress)
+		self.setAttr(name="statusChangeTS",value=float(ts),type="Number")
+
+		#Prevent possible superpositions of different operations updates ...
+		if _actualProgress >= actualProgress:
+			self.setAttr(name="actualProgress",value=_actualProgress,type="Number")
+
+		if self.getAttrValue("scheduledDelay")=="-":
+			self.processScheduleDelay()
+
+		attrList = ["currentOperation","scheduledDelay","progressDelay","expectedProgress","actualProgress","currentHours","statusChangeTS"]
 		self.updateAttrList(attrList)
 
 	def compareTimeStams(self, other):
@@ -603,7 +663,7 @@ class Order(Entity):
 	def deleteAll(self):
 		super().delete()
 
-		query = HTTP.entities_url + "/?q=order_id!='" + self.getOrderID() + "'&type=Operation&options=keyValues&attrs=id&limit=1000"
+		query = HTTP.entities_url + "/?q=orderNumber=='" + self.getOrderID() + "'&type=Operation&options=keyValues&attrs=id&limit=1000"
 
 		response,headers = HTTP.sendRequest("GET",query,HTTP.headers_get_iot)
 
@@ -611,7 +671,6 @@ class Order(Entity):
 		if response != None:
 			json_entity = json.loads(response)
 
-		# ??? Pode ser otimizado, só é necessário adequirir o ID ...
 		for o in json_entity:
 			deleteEntity(o["id"])
 
@@ -621,21 +680,9 @@ class Order(Entity):
 
 		return super().__eq__(other)
 
-class WorkCenter(Entity):
-	def __init__(self,row):
-		super().__init__(type="WorkCenter",id=int(row["id"]),name="WorkCenter",description=row["denomination"])
-		self.part_id = row["id"]
-		self.payload = row
-
-	def __eq__(self, other): 
-		if not isinstance(other, WorkCenter):
-			return NotImplemented
-
-		return self.payload == other.payload
-
 class Operation(Entity):
 	def __init__(self,id=Null,name=Null,description=Null):
-		super().__init__(type="Operation",id=id,name=name,description=description)
+		super().__init__(type="Operation",id=id,name=name,description="description")
 
 	def __str__(self):
 		return ("Operation(Number: " + str(self.getOperationNumber()) + ", Order: " + str(self.getOrderNumber()) + ")")
@@ -659,19 +706,48 @@ class Operation(Entity):
 		return self.getAttrValue("statusChangeTS")
 
 	def loadDBEntry(self, row):
-		super().__init__(type="Operation",id=str(row["ordernumber"])+str(row["operationnumber"]),name="Operation",description=row["description"])
+		super().__init__(type="Operation",id=str(row["ordernumber"])+str(row["operationnumber"]),name="Operation",description="description")
 		self.addAttr("workCenter_id","Text",str(row["workcenter_id"]))
-		self.addAttr("order_id","Text",str(row["order_id"]))
+		#self.addAttr("order_id","Text",str(row["order_id"]))
 		self.addAttr("operationNumber","Text",str(row["operationnumber"]))
-		self.addAttr("planedHours","Number",row["planedhours"])
-		self.addAttr("actualHours","Number",row["actualhours"])
+		plannedHours = float(row["plannedhours"])
+		self.addAttr("plannedHours","Number",plannedHours)
+		totalHours = float(row["totalhours"])
+		self.addAttr("totalHours","Number",totalHours)
+		actualHours = float(row["actualhours"])
+		self.addAttr("actualHours","Number",actualHours)
 		self.addAttr("operationNewStatus","Text",row["operationnewstatus"])
 		self.addAttr("operationOldStatus","Text",row["operationoldstatus"])
-		statusChangeTS = datetime.strptime(row["statuschangets"], '%Y-%m-%d %H:%M:%S.%f%z')
+		statusChangeTS = datetime.strptime(row["statuschangets"], '%Y-%m-%d %H:%M:%S%z')
 		self.addAttr("statusChangeTS","Number",statusChangeTS.timestamp())
 		self.addAttr("orderNumber","Text",row["ordernumber"])
-		self.addAttr("progress","Text","-")
-		self.addAttr("actualProgress","Text","-")
+
+		updateTS = datetime.strptime(row["updatets"], '%Y-%m-%d %H:%M:%S.%f%z')
+		self.addAttr("updateTS","Number",updateTS.timestamp())
+
+		expectedProgress = None
+		actualProgress = None
+
+		if row["operationnewstatus"]=="UNRELEASED":
+			expectedProgress=0
+		else:
+			if row["operationnewstatus"] == "COMPLETE":
+				actualProgress=100
+
+		if row["actualprogress"]:
+			actualProgress = int(row["actualprogress"])
+		else:
+			if not row["operationnewstatus"] in ("COMPLETE","CANCELLED"):
+				if actualHours!=None and (totalHours!=None and totalHours>0):
+					actualProgress = int(actualHours/totalHours*100)
+
+		if expectedProgress==None and actualHours!=None and (plannedHours!=None and plannedHours>0):
+			expectedProgress = int(actualHours/plannedHours*100)
+
+		if expectedProgress!=None:
+			self.addAttr("expectedProgress","Number",expectedProgress)
+		if actualProgress!=None:
+			self.addAttr("actualProgress","Number",actualProgress)
 
 	def compareTimeStams(self, other):
 		if self.getTimeStamp() > other.getTimeStamp():
@@ -679,19 +755,33 @@ class Operation(Entity):
 		else:
 			return False
 
-	#GET the WC associated to this operation
-	#def getWorkCenter(self):
-	#	if "refWorkCenter" in self.json_entity:
-	#		if "value" in self.json_entity["refWorkCenter"]:
-	#			newStation = Station()
-	#			newStation.get(self.json_entity["refWorkCenter"]["value"])
-	#			return newStation
-	#	return None
+	def processDelay(self, actualProgress, eventTS):
+		
+		self.setAttr(name="actualProgress",value=int(actualProgress),type="Number")
 
-	def processProgress(self, actualProgress):
-		#expectedProgress = actualHours/plannedHours
-		self.setAttr("actualProgress","Text",str(actualProgress))
-		self.updateAttr("actualProgress")
+		actualHours = float(self.getAttrValue("actualHours"))
+		plannedHours = float(self.getAttrValue("plannedHours"))
+
+		if plannedHours > 0:
+			expectedProgress = int(actualHours/plannedHours*100)
+			#If the value exceeds 100% it means that the operation should have already ended ...
+			if expectedProgress>100:
+				expectedProgress=100
+			if actualProgress > expectedProgress*1.05:
+				self.setAttr(name="progressDelay",value="ADVANCED",type="Text")
+			else:
+				if actualProgress < expectedProgress*0.95:
+					self.setAttr(name="progressDelay",value="DELAYED",type="Text")
+				else:
+					self.setAttr(name="progressDelay",value="NORMAL",type="Text")
+		else:
+			expectedProgress = 0
+
+		self.setAttr(name="expectedProgress",value=int(expectedProgress),type="Number")
+		self.setAttr(name="statusChangeTS",value=float(eventTS),type="Number")
+
+		attrList = ["actualProgress","expectedProgress","progressDelay","statusChangeTS"]
+		self.updateAttrList(attrList)
 
 class Part(Entity):
 	def __init__(self,row):
@@ -701,7 +791,6 @@ class Part(Entity):
 		self.addAttr("serialNumber","Text",row["serialnumber"])
 		self.addAttr("partRev","Text",row["partrev"])
 		self.addAttr("cemb","Text",row["cemb"])
-		self.addAttr("planedHours","Number",row["planedhours"])
 
 	def getID(self):
 		return self.part_id
@@ -715,69 +804,32 @@ class Part(Entity):
 
 		return self.json_entity == other.json_entity
 
+class WorkCenter(Entity):
+	def __init__(self,row):
+		super().__init__(type="WorkCenter",id=int(row["id"]),name="WorkCenter",description=row["denomination"])
+		self.part_id = row["id"]
+		self.payload = row
 
-#class Requirements(Entity):
-#	def __init__(self,id=Null,name=Null, query=Null, refSensor=Null, refStation=Null, max=Null, min=Null, description=Null):
-#		super().__init__(type="Requirements",id=id,name=name,description=description)
-#		self.addAttr("refDevice","Relationship",refSensors)
-#		self.addAttr("refStation", "Relationship", refDevice)
-#		self.addAttr("query", "Query", query)
-#		self.addAttr("max", "Number", max)
-#		self.addAttr("min", "Number", min)
-#
-#	def getDevice(self):
-#		if "refDevice" in self.json_entity:
-#			if "value" in self.json_entity["refDevice"]:
-#				device = Device()
-#				device.get(self.json_entity["refDevice"]["value"])
-#				return device
-#		return None
-#
-#	def getStation(self):
-#		if "refStation" in self.json_entity:
-#			if "value" in self.json_entity["refStation"]:
-#				station = Station()
-#				station.get(self.json_entity["refStation"]["value"])
-#				return station
-#		return None
-#
-#class Device(Entity):
-#	def __init__(self):
-#		super().__init__(type="Device")
-#
-#	def __init__(self,id=Null,name=Null, description=Null):
-#		super().__init__(type="Device",id=id,name=name,description=description)
-#
-#	def get(self, entity_id):
-#		self.id = entity_id
-#		entity_url = HTTP.entities_url + "/" + self.id
-#
-#		response,headers = HTTP.sendRequest("GET",entity_url,HTTP.headers_get_iot)
-#		self.json_entity = json.loads(response)
-#
-#	def getByStation(self, refStation):
-#		url = HTTP.entities_url + "/?q=refStation=='" + refStation + "'&type=Led&options=keyValues&attrs=type&limit=1"
-#		response = json.loads(HTTP.sendRequest("GET",url, HTTP.headers_get_iot)[0])
-#
-#		if len(response)==1 and len(response[0])==2:
-#			self.get(response[0]["id"])
-#			return True
-#			
-#		return False
-#
-#	def execCommand(self, command):
-#		if "id" in self.json_entity:
-#			if command in self.json_entity:
-#				if "Command" in self.json_entity[command].values():
-#
-#					payload = {}
-#					payload[command] = {}
-#					payload[command]["type"] = "Command"
-#					payload[command]["value"] = ""
-#
-#					print(colored("Send command: ", "green") + command)
-#					HTTP.sendRequest("PATCH",HTTP.entities_url + "/" + self.json_entity["id"] + "/attrs",HTTP.iot_headers,json.dumps(payload))
-#					return True
-#
-#		print(colored("Error, the command could not be sent: ", "red") + command)
-#		return False
+	def __eq__(self, other): 
+		if not isinstance(other, WorkCenter):
+			return NotImplemented
+
+		return self.payload == other.payload
+
+
+## Additional debug/verification classes/methods
+class TestInfo(Entity):
+	def __init__(self,row):
+		super().__init__(type="TestInfo",id=1,name="TestInfo",description="Information about the simulation")
+		actualStart = datetime.strptime(row["actualstart"], '%Y-%m-%d %H:%M:%S%z')
+		self.addAttr("actualStart","Number",actualStart.timestamp())
+		actualEnd = datetime.strptime(row["actualend"], '%Y-%m-%d %H:%M:%S%z')
+		self.addAttr("actualEnd","Number",actualEnd.timestamp())
+		virtualStart = datetime.strptime(row["virtualstart"], '%Y-%m-%d %H:%M:%S%z')
+		self.addAttr("virtualStart","Number",virtualStart.timestamp())
+		virtualEnd = datetime.strptime(row["virtualend"], '%Y-%m-%d %H:%M:%S%z')
+		self.addAttr("virtualEnd","Number",virtualEnd.timestamp())
+		self.addAttr("numberOfOrders","Number",row["numberoforders"])
+		self.addAttr("numberOfOperations","Number",row["numberofoperations"])
+		self.addAttr("operationtotalHours","Number",row["operationstotalhours"])
+		self.addAttr("numberOfEvents","Number",row["numberofevents"])

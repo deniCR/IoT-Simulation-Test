@@ -23,7 +23,7 @@ Order_subscription = {
 		},
 		"attrs": [
 			"scheduledStart","scheduledEnd","actualStart","orderNewStatus","statusChangesTS",
-			"actualEnd","totalActualHours","totalPlanedHours","totalNumberOfEndedOperations","totalNumberOfOperations","scheduledDelay"
+			"actualEnd","currentHours","plannedHours","totalHours","actualProgress","scheduledDelay"
 			],
 		"attrsFormat": "keyValues"
 	},
@@ -33,7 +33,7 @@ Progress_subscription = {
 	"description": "Notify DelayAnalysis of all progressSensor measurements",
 	"subject": { 
 		"entities": [{"idPattern": ".*", "type": "ProgressSensor"}],
-		"condition": {"attrs": ["Progress"]}
+		"condition": {"attrs": ["progress"]}
 	},
 	"notification": {
 		"http": {
@@ -41,7 +41,7 @@ Progress_subscription = {
 			"accept": "application/json"
 		},
 		"attrs": [
-			"progress","timeStamp","operationNumber","workcenter_id"
+			"progress","timeStamp","operationNumber","orderNumber","workcenter_id"
 			],
 		"attrsFormat": "keyValues"
 	},
@@ -81,34 +81,39 @@ def processProgress(body):
 				wc_id = r["workcenter_id"]
 				ev_ts = r["timeStamp"]
 				op_number = r["operationNumber"]
+				order_number = r["orderNumber"]
 
 				#print(r)
 
 				op = Entities.Operation()
-				_query=("q=workCenter_id==\'" + str(wc_id) + "\';statusChangeTS<='" + str(ev_ts) + "'&type=Operation&options=keyValues&limit=1&orderBy=!statusChangeTS")
+				_query=("q=workCenter_id==\'" + str(wc_id) + "\';orderNumber==\'" + str(order_number) + "\';operationNumber==\'" + str(op_number) +  "\';statusChangeTS<=" + str(ev_ts) + ";operationNewStatus=='RUN'&type=Operation&options=keyValues,count&limit=5&orderBy=!statusChangeTS")
 				
 				print(_query)
 
 				if op.get(query=_query):
 
-					actualProgress = r["Progress"]
+					actualProgress = int(r["progress"])
+					prevProgress = op.getAttrValue("actualProgress")
+					if prevProgress == None:
+						prevProgress = -1
+
+					op_q = op.getAttrValue("operationNumber")
+					if op_number != op_q:
+						print("Operation expected: " + str(op_number) + " operation query: " + str(op.getAttrValue("operationNumber")))
+					
 					#Update the process state ...
-					print("Operation progress: " + actualProgress)
-					print("Operation expected: " + op_number + " operation query: " + op.getAttrValue("operationNumber"))
-					op.processProgress(actualProgress)
+					if actualProgress > prevProgress:
+						op.processDelay(actualProgress,ev_ts)
 
-					#Update process state of the Order ...
-					ord_id = op.getOrderID()
+						#Update process state of the Order ...
+						ord_id = op.getOrderID()
+						ord_id = "urn:ngsi-ld:Order:" + str(ord_id)
 
-					if ord_id!=None:
-						print(ord_id)
-						ord = Entities.Order()
+						if ord_id!=None:
+							ord = Entities.Order()
 
-						if ord.get(entity_id=ord_id):
-							ord.processOperationProcess(op,actualProgress)
-							print(ord)
-					else:
-						print("ORDER_ID IS NONE ::::")
+							if ord.getEntity(entity_id=ord_id):
+								ord.processOperationProgress(op,actualProgress,ev_ts)
 
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
