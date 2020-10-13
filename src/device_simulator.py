@@ -24,8 +24,9 @@ def main():
 	lastID = 0
 
 	while True:
+		sleep(0.4)
 		#read data from MES-DB (sensor events)
-		sensor_ev_list = DB_Entities.readNewSensorEvents(lastID)
+		sensor_ev_list = DB_Entities.readNewSensorEvents(lastID,120)
 
 		if len(sensor_ev_list) > 0:
 			lastID = list(sensor_ev_list.keys())[-1]

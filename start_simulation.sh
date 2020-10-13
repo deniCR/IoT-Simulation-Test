@@ -11,7 +11,7 @@ export DB_IP_ADDRESS="192.168.2.199"
 export DB_PORT_ADDRESS="5432"
 export FIWARE_IP_ADDRESS="192.168.2.199"
 export FIWARE_PORT_ADDRESS="1026"
-export DELAYANALYSIS_IP_ADDRESS="192.168.2.151"
+export DELAYANALYSIS_IP_ADDRESS="192.168.2.150"
 export DELAYANALYSIS_PORT_ADDRESS="40001"
 #Agent broker ...
 #Agent device  ...
@@ -19,9 +19,9 @@ export DELAYANALYSIS_PORT_ADDRESS="40001"
 
 workcenter_csv="./src/csv_file/Workcenter.csv"
 partnumber_csv="./src/csv_file/Part.csv"
-order_csv="./src/csv_file/Order_s.csv"
-operation_csv="./src/csv_file/operations_change_status_alt_7_s_s"
-time_scale="1000"
+order_csv="./src/csv_file/Order_1_month.csv"
+operation_csv="./src/csv_file/Operation_1_month.csv"
+time_scale="250" # every virtual second corresponds to time_scale seconds
 
 #Execution
 #./start_fiware

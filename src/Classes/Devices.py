@@ -29,18 +29,12 @@ class Device():
 		device["entity_type"] = self.entity_type
 		device["protocol"] = self.protocol
 
-		attributes = {}
-		attributes["object_id"] = type[0].lower()
-		attributes["name"] = (type).replace('Sensor','')
-		attributes["type"] = "Integer"
-
 		static_attributes = {}
 		static_attributes["name"] = "refStation"
 		static_attributes["type"] = "Relationship"
 		static_attributes["value"] = self.ref
 	
 		device["attributes"] = []
-		device["attributes"].append(attributes)
 		device["static_attributes"] = []
 		device["static_attributes"].append(static_attributes)
 
@@ -109,7 +103,7 @@ class Device():
 		return "Device: " + self.entity_type + " - " + self.device_id
 
 class ProgressSensor(Device):
-	def __init__(self, protocol=Null, apikey=Null, ref=Null, workcenter_id=Null, operationNumber=Null, progress=Null, timeStamp=Null):
+	def __init__(self, protocol=Null, apikey=Null, ref=Null, workcenter_id=Null, operationNumber=Null, orderNumber=Null, progress=Null, timeStamp=Null, opRunStart=Null):
 
 		self.id = str(workcenter_id)
 		super().__init__(workcenter_id, "ProgressSensor", protocol, apikey, ref)
@@ -122,36 +116,45 @@ class ProgressSensor(Device):
 
 		self.json_entity["devices"][0]["static_attributes"].append(static_attributes)
 
-		static_attributes_2 = {}
-		static_attributes_2["name"] = "operationNumber"
-		static_attributes_2["type"] = "Text"
-		static_attributes_2["value"] = operationNumber
+		attributes_1 = {}
+		attributes_1["name"] = "operationNumber"
+		attributes_1["type"] = "Text"
+		attributes_1["object_id"] = "o"
+		self.operationNumber = operationNumber
 
-		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_2)
+		self.json_entity["devices"][0]["attributes"].append(attributes_1)
 
-		static_attributes_3 = {}
-		static_attributes_3["name"] = "progress"
-		static_attributes_3["type"] = "Text"
-		static_attributes_3["value"] = progress
+		attributes_2 = {}
+		attributes_2["name"] = "progress"
+		attributes_2["type"] = "Numeric"
+		attributes_2["object_id"] = "p"
 
-		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_3)
+		self.json_entity["devices"][0]["attributes"].append(attributes_2)
 
 		if timeStamp != Null:
-			timeStamp_aux = datetime.strptime(timeStamp, '%Y-%m-%d %H:%M:%S.%f%z')
+			timeStamp_aux = datetime.strptime(timeStamp, '%Y-%m-%d %H:%M:%S%z')
 		else:
 			timeStamp_aux = datetime.now()
 
-		static_attributes_4 = {}
-		static_attributes_4["name"] = "timeStamp"
-		static_attributes_4["type"] = "Numeric"
-		static_attributes_4["value"] = timeStamp_aux.timestamp()
+		attributes_3 = {}
+		attributes_3["name"] = "timeStamp"
+		attributes_3["type"] = "Numeric"
+		attributes_3["object_id"] = "t"
 		self.timestamp = timeStamp_aux.timestamp()
 
-		self.json_entity["devices"][0]["static_attributes"].append(static_attributes_4)
+		self.json_entity["devices"][0]["attributes"].append(attributes_3)
+
+		attributes_4 = {}
+		attributes_4["name"] = "orderNumber"
+		attributes_4["type"] = "Text"
+		attributes_4["object_id"] = "n"
+		self.orderNumber = orderNumber
+
+		self.json_entity["devices"][0]["attributes"].append(attributes_4)
 
 	def loadDBEntry(self,protocol,apikey,ref,row):
 		if 	"workcenter_id" in row and row["workcenter_id"]:
-			self.__init__(protocol, apikey, ref, row["workcenter_id"], row["operationnumber"], row["progress"], row["timestamp"])
+			self.__init__(protocol, apikey, ref, row["workcenter_id"], row["operationnumber"], row["ordernumber"], row["progress"], row["timestamp"], row["oprunstart"])
 			return True
 		else:
 			return False
@@ -160,7 +163,9 @@ class ProgressSensor(Device):
 		return self.timestamp
 
 	def sendData(self):
-		print("Deive: " + self.id + " progress: " + str(self.progress))
-		payload="p|"+str(self.progress)
+		ts = datetime.fromtimestamp(self.timestamp)
+		print("Deive: " + str(self.id) + " Operation: " + str(self.orderNumber) + str(self.operationNumber) + " progress: " + str(self.progress))
+		print(" TimeStamp: " + str(ts.strftime('%Y/%m/%d %H:%M:%S')))
+		payload="p|"+str(self.progress) + "|t|" + str(self.timestamp) + "|o|" + str(self.operationNumber) + "|n|" + str(self.orderNumber)
 		super().sendData(payload)
 

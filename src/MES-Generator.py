@@ -12,17 +12,16 @@ timezone = pytz.timezone('Europe/London')
 
 def event_simulation(eventDict):
 
-	previousTimestemp=0
 	shiftTime=0
-	diff=0
 	failed=0
 	sucessed=0
 
 	start_event_simulation = datetime.now()
 
 	for ts,ev in eventDict.items():
-		nextTimestamp = ev.getTimestamp()
-		shiftTime = float(nextTimestamp - datetime.now(timezone).timestamp())
+		nextTimestamp = ts
+		now = datetime.now(timezone).timestamp()
+		shiftTime = float(nextTimestamp - now)
 
 		if(shiftTime>0):
 			sleep(shiftTime)
@@ -30,6 +29,9 @@ def event_simulation(eventDict):
 
 		#ev.setTimestamps(datetime.datetime.now())
 		#print(datetime.datetime.now())
+
+		ev.setUpdateTS(datetime.now(timezone).timestamp())
+
 		if not(ev.insert()):
 			failed = failed+1
 		else:
@@ -43,12 +45,26 @@ def event_simulation(eventDict):
 
 	return start_event_simulation,end_event_simulation,operations_failed2insert,operations_sucessed2insert
 
+def scaleConvert(eventDict,actual_start,virtual_start,scale):
+	newEventDict = {}
+	a_start = actual_start.timestamp()
+	v_start = virtual_start.timestamp()
+
+	for ts,event in eventDict.items():
+		diff = ts - a_start
+		newTS = v_start+diff/scale		
+		newEventDict.update({newTS: event})
+
+	del eventDict
+
+	return newEventDict
+
 def main(argv):
 	WC_csv = 'WorkCenter.csv'
 	Part_csv = 'Part.csv'
 	Order_csv = 'order_change_status_5'
 	Operation_csv = 'operations_change_status_alt_5'
-	time_scale = 2000 # 2000 times faster
+	time_scale = 200 # 200 times faster
 
 	if len(argv) == 5:
 		WC_csv = argv[0]
@@ -65,38 +81,42 @@ def main(argv):
 	DB_Entities.setStaticEntities(WC_csv,Part_csv)
 
 	#Orders and operation events
-	eventDict,opEventList = DB_Entities.readCSV(Order_csv,Operation_csv)
+	eventDict,numberOfOrders,numberOfOperations,operationsTotalHours,numberOfEvents = DB_Entities.readCSV(Order_csv,Operation_csv)
 
 	keys_list = list(eventDict.keys())
-	actual_start_day = datetime.fromtimestamp(keys_list[0])
-	actual_last_day = datetime.fromtimestamp(keys_list[-1])
-	actual_time = actual_last_day-actual_start_day
+	actual_start = datetime.fromtimestamp(keys_list[0])
+	actual_end = datetime.fromtimestamp(keys_list[-1])
+	actual_time = actual_end-actual_start
 	virtual_time = actual_time/time_scale
-	virtual_start_day = datetime.now()
-	virtual_last_day = virtual_start_day + virtual_time
+	virtual_start = datetime.now()
+	virtual_end = virtual_start + virtual_time
 
 	print("\nActual interval time: " + str(actual_time))
-	print("Actual first event day: " + str(actual_start_day))
-	print("Last event day: " + str(actual_last_day))
+	print("Actual first event day: " + str(actual_start))
+	print("Last event day: " + str(actual_end))
 	print("The simulation will run " + str(time_scale) + " times faster")
 	print("\nVirtual interval time: " + str(virtual_time))
-	print("Virtual first event day: " + str(virtual_start_day))
-	print("Virtual Last event day: " + str(virtual_last_day))
-	expected_end = virtual_start_day+virtual_time
+	print("Virtual first event day: " + str(virtual_start))
+	print("Virtual Last event day: " + str(virtual_end))
+	expected_end = virtual_start+virtual_time
 	print("Expected end of the simulation: " + str(expected_end) + "\n")
 	
-	for key,ev in eventDict.items():
-		ev.updateDates(actual_start_day,virtual_start_day,time_scale)
+	eventDict = scaleConvert(eventDict,actual_start,virtual_start,time_scale)
+	#for key,ev in eventDict.items():
+	#	ev.updateDates(actual_start_day,virtual_start_day,time_scale)
+
+	DB_Entities.TestInfo(actual_start.timestamp(),actual_end.timestamp(),virtual_start.timestamp(),virtual_end.timestamp(),numberOfOrders,numberOfOperations,operationsTotalHours,numberOfEvents).insert()
 
 	#Event simulation
-	st_ev_sim,end_ev_sim,op_failed2insert,op_sucessed2insert = event_simulation(eventDict)
+	st_ev_sim,end_ev_sim,ev_failed,ev_sucessed = event_simulation(eventDict)
 
 	print("\nEvent simulation start: " + str(st_ev_sim))
 	print("End event simulation: " + str(end_ev_sim))
 	print("Time interval: " + str(end_ev_sim - st_ev_sim))
 	print("End time vs Expected end time: " + str(end_ev_sim - expected_end))
-	print("Operations Failed: " + str(op_failed2insert))
-	print("Operation Succeeded: " + str(op_sucessed2insert))
+	print("Number of events: " + str(len(eventDict)))
+	print("Number of events deployed: " + str(ev_sucessed))
+	print("Number of events failed: " + str(ev_failed))
 
 	DB_Entities.conn.close()
 
