@@ -525,12 +525,17 @@ class Order(Entity):
 		self.addAttr("orderOldStatus","Text",row["orderoldstatus"])
 		statusChangeTS = datetime.strptime(row["statuschangets"], '%Y-%m-%d %H:%M:%S%z')
 		self.addAttr("statusChangeTS","Number",statusChangeTS.timestamp())
-		self.addAttr("plannedHours","Number",float(row["plannedhours"]))
 
 		totalHours = row["totalhours"]
 		if totalHours == None:
 			totalHours = 0
-		self.addAttr("totalHours","Number",float(totalHours))
+		totalHours = float(totalHours)
+		self.addAttr("totalHours","Number",totalHours)
+
+		plannedHours = float(row["plannedhours"])
+		if plannedHours==0:
+			plannedHours=totalHours
+		self.addAttr("plannedHours","Number",plannedHours)
 
 		currentHours = row["currenthours"]
 
@@ -617,6 +622,7 @@ class Order(Entity):
 			_actualProgress = int(currentHours/totalHours*100)
 		else:
 			_actualProgress = 0
+			_currentHours = 0
 
 		#Cases that can occur with the aggregation of actualHours from the operations
 		if actualProgress > _actualProgress or _actualProgress > 100:
@@ -632,10 +638,10 @@ class Order(Entity):
 			self.setAttr(name="progressDelay",value="Indeterminate",type="Text")
 		else:
 			expectedProgress = int(_currentHours/plannedHours*100)
-			if _actualProgress > expectedProgress*1.05:
+			if _actualProgress > (expectedProgress*1.05):
 				self.setAttr(name="progressDelay",value="ADVANCED",type="Text")
 			else:
-				if _actualProgress < expectedProgress*0.95:
+				if _actualProgress < (expectedProgress*0.95):
 					self.setAttr(name="progressDelay",value="DELAYED",type="Text")
 				else:
 					self.setAttr(name="progressDelay",value="NORMAL",type="Text")
@@ -710,10 +716,13 @@ class Operation(Entity):
 		self.addAttr("workCenter_id","Text",str(row["workcenter_id"]))
 		#self.addAttr("order_id","Text",str(row["order_id"]))
 		self.addAttr("operationNumber","Text",str(row["operationnumber"]))
-		plannedHours = float(row["plannedhours"])
-		self.addAttr("plannedHours","Number",plannedHours)
 		totalHours = float(row["totalhours"])
 		self.addAttr("totalHours","Number",totalHours)
+		plannedHours = float(row["plannedhours"])
+		#Enable delay analysis ...
+		if plannedHours == 0:
+			plannedHours = totalHours
+		self.addAttr("plannedHours","Number",plannedHours)
 		actualHours = float(row["actualhours"])
 		self.addAttr("actualHours","Number",actualHours)
 		self.addAttr("operationNewStatus","Text",row["operationnewstatus"])
@@ -746,8 +755,30 @@ class Operation(Entity):
 
 		if expectedProgress!=None:
 			self.addAttr("expectedProgress","Number",expectedProgress)
+		else:
+			expectedProgress=0
 		if actualProgress!=None:
 			self.addAttr("actualProgress","Number",actualProgress)
+		else:
+			actualProgress=0
+
+		#The processDelay should be update in a similar way as the Order.progressDelay ...
+		# through the delayAnalysis sub/not
+		if plannedHours > 0:
+			expectedProgress = int(actualHours/plannedHours*100)
+			#If the value exceeds 100% it means that the operation should have already ended ...
+			if expectedProgress>100:
+				expectedProgress=100
+			if actualProgress > expectedProgress*1.05:
+				self.setAttr(name="progressDelay",value="ADVANCED",type="Text")
+			else:
+				if actualProgress < expectedProgress*0.95:
+					self.setAttr(name="progressDelay",value="DELAYED",type="Text")
+				else:
+					self.setAttr(name="progressDelay",value="NORMAL",type="Text")
+		else:
+			expectedProgress = 0
+			self.setAttr(name="progressDelay",value="Indeterminate",type="Text")
 
 	def compareTimeStams(self, other):
 		if self.getTimeStamp() > other.getTimeStamp():
@@ -776,6 +807,7 @@ class Operation(Entity):
 					self.setAttr(name="progressDelay",value="NORMAL",type="Text")
 		else:
 			expectedProgress = 0
+			self.setAttr(name="progressDelay",value="Indeterminate",type="Text")
 
 		self.setAttr(name="expectedProgress",value=int(expectedProgress),type="Number")
 		self.setAttr(name="statusChangeTS",value=float(eventTS),type="Number")

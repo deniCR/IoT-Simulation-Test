@@ -43,26 +43,6 @@ def readCSV(order_csv_file,operation_csv_file):
 
 		print("Number of order event readed: " + str(len(eventDict)) + " vs counter: " + str(aux_count))
 
-		#Get the total_hours of each order
-		#for orderN in orderList.keys():
-		#	totalHours = 0.0
-		#	runStart = None
-		#	rubEnd = None
-		#	orderList[orderN] = dict(sorted(orderList[orderN].items(), key=lambda item: item[0]))
-		#	for ts,orderEvent in orderList[orderN].items():
-		#		if orderEvent.getNewStatus() == "RUN":
-		#			runStart = ts
-		#		if orderEvent.getOldStatus() == "RUN":
-		#			runEnd = ts
-		#			if runStart != None:
-		#				diff = runEnd - runStart
-		#				totalHours += float(diff/3600)
-		#			else:
-		#				runStart=None
-		#		orderEvent.setActualHours(totalHours)
-		#	for ts,orderEvent in orderList[orderN].items():
-		#		orderEvent.setTotalHours(totalHours)
-
 	opEventList={}
 	opTotalHours = {}
 	opRunTimeIntervals= {}
@@ -87,17 +67,28 @@ def readCSV(order_csv_file,operation_csv_file):
 				opEventList.update({orderNumber: {}})
 				opTotalHours.update({orderNumber: {}})
 				opRunTimeIntervals.update({orderNumber: {}})
-
 			if not(operationNumber in opEventList[orderNumber]):
 				opEventList[orderNumber].update({operationNumber: {}})
 				opTotalHours[orderNumber].update({operationNumber: 0})
 				opRunTimeIntervals[orderNumber].update({operationNumber: 0})
-
 			opEventList[orderNumber][operationNumber].update({ts: op})
 
-		print("Number of opEvents readed: " + str(len(eventDict)) + " vs counter: " + str(aux_count))
+			newOrderEv=None
+			#Check if there are prior OrderEvents to this operation
+			if orderNumber in orderList:
+				o_ts,newOrderEv=checkPrevOrderEvents(op,orderList[orderNumber])
+			else:
+				orderList.update({orderNumber: {}})
+				o_ts,newOrderEv=checkPrevOrderEvents(op,None)
 
-		#sensorEvents = {}
+			if newOrderEv!=None:
+				#Add the newOrderEvent
+				while o_ts in eventDict:
+					o_ts+=1
+				eventDict.update({o_ts: newOrderEv})
+				orderList[orderNumber].update({o_ts: newOrderEv})
+
+		print("Number of opEvents readed: " + str(len(eventDict)) + " vs counter: " + str(aux_count))
 
 		#Set actual totalHours per operation
 		for orderN in opEventList:
@@ -164,8 +155,8 @@ def readCSV(order_csv_file,operation_csv_file):
 						eventsInterval = 1
 					runStart = None
 
-					print("\nEvent per operation: " + str(orderN) + str(operationN))
-					print("\tmin events: " + str(eventsInterval))
+					#print("\nEvent per operation: " + str(orderN) + str(operationN))
+					#print("\tmin events: " + str(eventsInterval))
 
 					for ts,opEvent in opEventList[orderN][operationN].items():
 
@@ -181,34 +172,34 @@ def readCSV(order_csv_file,operation_csv_file):
 								else:
 									x = eventsInterval
 
-								print("\tstart: " + str(runStart) + " end: " + str(ts))
-								print("\t\tevent interval: " + str(interval))
-								print("\t\tevents per Interval: " + str(x))
+								#print("\tstart: " + str(runStart) + " end: " + str(ts))
+								#print("\t\tevent interval: " + str(interval))
+								#print("\t\tevents per Interval: " + str(x))
 								for i in range(0,x):
 									i_aux = i+1
 									x_aux = x+1
-									print("\t\t(i,x) " + str(i_aux) + " " + str(x_aux) + " percentage: + " + str(i_aux/x_aux))
+									#print("\t\t(i,x) " + str(i_aux) + " " + str(x_aux) + " percentage: + " + str(i_aux/x_aux))
 									timeShift = interval*(i_aux/x_aux)
-									print("\t\t timeShift: " + str(timeShift))
+									#print("\t\t timeShift: " + str(timeShift))
 									eventTS = (runStart + timeShift)
 									while eventTS in eventDict:
 										eventTS+=1
-									print("\t\tevent timestamp: " + str(eventTS))
+									#print("\t\tevent timestamp: " + str(eventTS))
 									if (eventTS < runStart) or (eventTS > ts):
 										print("ERROR: evTS-start = " + str(eventTS - runStart) + "  end-evTS = " + str(ts-eventTS))
 									hoursBefEvent = float((interval*(1-(i_aux/x_aux)))/3600)
-									print("\t\thours before event: " + str(hoursBefEvent))
+									#print("\t\thours before event: " + str(hoursBefEvent))
 									newSensorEvent = SensorEvent(opEvent,eventTS,(-hoursBefEvent),totalHours,runStart)
 									eventDict.update({eventTS: newSensorEvent})
 							else:
 								runStart=None
 
-	#print("Number of Orders events: " + str(len(orderDict)) + "\nNumber of Operations events: " + str(len(eventDict)) + "\nNumber of sensor events: " + str(len(sensorEvents)))
-
 	#eventDict = {**orderDict,**sensorEvents,**eventDict}
 
+	#Sort all events by timestamps
 	eventDict = dict(sorted(eventDict.items(), key=lambda item: item[0]))
 
+	#Debug information
 	numberOfEvents = len(eventDict)
 	print("Total events: " + str(numberOfEvents))
 
@@ -220,6 +211,42 @@ def readCSV(order_csv_file,operation_csv_file):
 		operationsTotalHours+=sum(operationList.values())
 
 	return eventDict,numberOfOrders,numberOfOperations,operationsTotalHours,numberOfEvents
+
+#Checks the consistency of order events 
+# ensure that there is at least one order event prior to the event of this operation
+def checkPrevOrderEvents(op,orderList):
+	op_ts = op.getTimeStamp()
+	priorOrderEvent = False
+	if orderList==None:
+		priorOrderEvent = False
+	else:
+		for timestamp in orderList.keys():
+			if timestamp < op_ts:
+				priorOrderEvent = True
+				break
+	
+	order_ts=0
+	newOrder=None
+
+	if priorOrderEvent == False:
+		#Create new orderEvent
+		print("New Order: " + op.getOrderNumber())
+		data = {}
+		data.update({"ORDER_ID": op.getOrderNumber()})
+		data.update({"NEW_STATUS": "-"})
+		data.update({"OLD_STATUS": "-"})
+		data.update({"SCHEDULE_START_DATE": " "})
+		data.update({"PN": "-"})
+		data.update({"ACTUAL_START_DATE": " "})
+		data.update({"SITE": "-"})
+		order_ts = datetime.fromtimestamp(op_ts-(24*3600))
+		data.update({"STATUS_CHANGE_TS": datetime.strftime(order_ts, '%Y/%m/%d %H:%M:%S')})
+		newOrder = Order(data)
+		newOrder.setTotalHours(0)
+		newOrder.setPlannedHours(0)
+		order_ts = order_ts.timestamp()
+			
+	return order_ts,newOrder
 
 def dropTable(cur,table):
 	cur.execute("select exists(select * from information_schema.tables where table_name=%s)", (table,))
@@ -428,10 +455,9 @@ class Order():
 			self.actualEnd = newTime
 
 	def insert(self):
-		if(self.orderNumber.isdigit()):
-			print(str(datetime.fromtimestamp(self.statusChangeTS)) + colored(" INSERT ORDER: ","green") + self.orderNumber)
-			with conn.cursor() as cur:
-				cur.execute("""INSERT INTO order_status_changes VALUES 
+		print(str(datetime.fromtimestamp(self.statusChangeTS)) + colored(" INSERT ORDER: ","green") + self.orderNumber)
+		with conn.cursor() as cur:
+			cur.execute("""INSERT INTO order_status_changes VALUES 
 					(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 					""",(self.orderNumber,self.currentOperation,self.partNumber,self.part_id,
 						self.orderNewStatus,self.orderOldStatus,self.plannedHours,
@@ -441,9 +467,8 @@ class Order():
 						datetime.fromtimestamp(self.updateTS)))
 
 			conn.commit()
-			return True
-		else:
-			return False
+		return True
+
 
 operation_status_changes_table = 	"""	CREATE TABLE operation_status_changes
 										(
@@ -572,7 +597,7 @@ class Operation():
 	def getActualHours(self):
 		return self.actualHours
 
-	def getTimestamp(self):
+	def getTimeStamp(self):
 		return self.statusChangeTS
 
 	def getTotalHours(self):
@@ -617,38 +642,9 @@ class Operation():
 			if order_id != None:
 				self.order_id = order_id[0]
 			else:
-				#self.order_id = None
-				#create new order with order_id == self.order ...
-				data = {}
-				data.update({"ORDER_ID": self.order})
-				data.update({"NEW_STATUS": "-"})
-				data.update({"OLD_STATUS": "-"})
-				data.update({"SCHEDULE_START_DATE": " "})
-				data.update({"PN": "-"})
-				data.update({"ACTUAL_START_DATE": " "})
-				#data.update({"PLANNED_DURATION": 0})
-				#data.update({"TOTAL_HOURS": 0})
-				data.update({"SITE": "-"})
-				order_ts = datetime.fromtimestamp(self.statusChangeTS-1200) # 20min before the op event ...
-				data.update({"STATUS_CHANGE_TS": datetime.strftime(order_ts, '%Y/%m/%d %H:%M:%S')})
+				self.order_id = None
 
-				newOrder = Order(data)
-				newOrder.setTotalHours(0)
-				newOrder.setPlannedHours(0)
-				newOrder.setUpdateTS(order_ts.timestamp())
-				newOrder.insert()
-				
-				cur.execute("""SELECT id
-						FROM order_status_changes
-						WHERE ordernumber = %s; 
-					""",(self.order,))
-				order_id = cur.fetchone()
-				if order_id != None:
-					self.order_id = order_id[0]
-				else:
-					self.order_id=None
-
-		if(self.order_id != None and self.operation_id.isdigit()):
+		if(self.order_id != None):
 
 			print(str(datetime.fromtimestamp(self.statusChangeTS)) + colored(" INSERT OPERATION: ","green") + str(self.order) + str(self.operation_id))
 
@@ -664,7 +660,7 @@ class Operation():
 			conn.commit()
 			return True
 		else:
-			print(colored("Failed to insert Operations: ","red") + self.operation_id)
+			print(colored("Failed to insert Operations: ","red") + self.order + self.operation_id)
 
 		return False
 

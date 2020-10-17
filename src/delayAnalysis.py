@@ -14,7 +14,8 @@ Order_subscription = {
 	"description": "Notify DelayAnalysis of all Order",
 	"subject": { 
 		"entities": [{"idPattern": ".*", "type": "Order"}],
-		"condition": {"attrs": ["statusChangeTS"]}
+		"condition": {"attrs": ["statusChangeTS","scheduledDelay","progressDelay"],
+						"expression": {"q": "scheduledDelay=='-';progressDelay=='-'"}}
 	},
 	"notification": {
 		"http": {
@@ -23,7 +24,7 @@ Order_subscription = {
 		},
 		"attrs": [
 			"scheduledStart","scheduledEnd","actualStart","orderNewStatus","statusChangesTS",
-			"actualEnd","currentHours","plannedHours","totalHours","actualProgress","scheduledDelay"
+			"actualEnd","currentHours","plannedHours","totalHours","actualProgress","scheduledDelay","progressDelay"
 			],
 		"attrsFormat": "keyValues"
 	},
@@ -64,12 +65,15 @@ def processOrders(body):
 
 	if "data" in notification:
 		for r in notification["data"]:
+
+			print(r)
+
 			ord = Entities.Order(r["id"][18:])
 			ord.loadJsonEntity(r)
 
 			ord.processDelay()
 
-			if ord.getAttrValue("orderNewStatus") == "COMPLETE" or ord.getAttrValue("orderNewStatus") == "CANCELLED":
+			if ord.getAttrValue("orderNewStatus") in ("COMPLETE","CANCELLED"):
 				ord.deleteAll()
 
 def processProgress(body):
@@ -88,7 +92,7 @@ def processProgress(body):
 				op = Entities.Operation()
 				_query=("q=workCenter_id==\'" + str(wc_id) + "\';orderNumber==\'" + str(order_number) + "\';operationNumber==\'" + str(op_number) +  "\';statusChangeTS<=" + str(ev_ts) + ";operationNewStatus=='RUN'&type=Operation&options=keyValues,count&limit=5&orderBy=!statusChangeTS")
 				
-				print(_query)
+				#print(_query)
 
 				if op.get(query=_query):
 

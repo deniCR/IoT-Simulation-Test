@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import signal
+import os
 from time import sleep
 
 import Classes.Entities as Entities
@@ -91,7 +92,7 @@ def main():
 			part.provision()
 			del part
 
-		time = 720 #Events from the last T seconds in real time
+		time = 720 * float(os.environ["TIME_SCALE"]) #Events from the last T seconds in real time
 
 		#time = int(time/float(os.environ("TIME_SCALE")))
 
