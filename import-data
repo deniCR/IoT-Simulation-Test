@@ -7,29 +7,38 @@ set -e
 
 printf "\n⏳   Loading order subscriptions \n"
 
+#O quantim leap será notificado sempre que um dos atributos da condição seja alterado, assumindo que a expressão q seja respeitada ... estes atributos são alterados apenas pelo delayAnalysis ... os restantes atributos provem da DB
 curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	-H 'Content-Type: application/json' \
 	-H 'fiware-service: openiot' \
 	-H 'fiware-servicepath: /' \
 	--data-raw '{
-		"description": "Notify QuantumLeap of all Motion Sensor count changes",
-		"subject": {"entities": [{"idPattern": "Order.*"}]},
-		"notification": {
-			"http": {"url": "http://quantumleap:8668/v2/notify"},
-			"attrs": ["refPart","shopOrder","orderStatus","currentOperation","planedHours","actualHours","scheduledStart","scheduledEnd","actualStart","actualEnd","progress","scheduledDelay","progressDelay","actualStart","actualEnd"]
-		}
-	}'
+  		"description": "Notify QuantumLeap of all Order changes",
+  		"subject": {
+    			"entities": [{"idPattern": ".*", "type": "Order"}],
+      			"condition": {
+        			"attrs": ["scheduledDelay","progressDelay","currentOperatin","actualProgress"],
+       				"expression": {
+          				"q": "scheduledDelay!='-';progressDelay!='-'"
+        			}
+      			}
+  		},
+  		"notification": {
+    			"http": {"url": "http://quantumleap:8668/v2/notify"},
+    			"attrs": ["partNumber","orderNumber","orderNewStatus","orderOldStatus","currentOperation","scheduledStart","scheduledEnd","actualProgress","expectedProgress","scheduledDelay","progressDelay","actualStart","actualEnd","site","statusChangeTS","plannedHours","totalNumberOfOperations","currentHours","totalHours"]
+  		}
+		}'
 
 curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	-H 'Content-Type: application/json' \
 	-H 'fiware-service: openiot' \
 	-H 'fiware-servicepath: /' \
 	--data-raw '{
-		"description": "Notify QuantumLeap of all Motion Sensor count changes",
+		"description": "Notify QuantumLeap of all Part changes",
 		"subject": {"entities": [{"idPattern": "Part.*"}]},
 		"notification": {
 			"http": {"url": "http://quantumleap:8668/v2/notify"},
-			"attrs": ["partNumber","serialNumber","partRev","cemb","planedHours","description"]
+			"attrs": ["partNumber","serialNumber","partRev","cemb","description"]
 		}
 	}'
 
@@ -38,10 +47,10 @@ curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	-H 'fiware-service: openiot' \
 	-H 'fiware-servicepath: /' \
 	--data-raw '{
-		"description": "Notify QuantumLeap of all Motion Sensor count changes",
+		"description": "Notify QuantumLeap of all workcenter changes",
 		"subject": {"entities": [{"idPattern": "WorkCenter.*"}]},
 		"notification": {
-			"http": {"url": "http://quantumleap:8668/v2/notify"}
+			"http": {"url": "http://quantumleap:8668/v2/notify"},
 			"attrs": ["name","description"]
 		}
 	}'
@@ -51,10 +60,40 @@ curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	-H 'fiware-service: openiot' \
 	-H 'fiware-servicepath: /' \
 	--data-raw '{
-		"description": "Notify QuantumLeap of all Motion Sensor count changes",
-		"subject": {"entities": [{"idPattern": "Operation.*"}]},
-		"notification": {
-				"http": {"url": "http://quantumleap:8668/v2/notify"},
-				"attrs": ["workCenter_id","order_id","operationNumber","planedHours","operationStatus","fristRunDate","completeRunDate","setUpMan","manPowerHours","setUpMachine","machineHours","description"]
-	  }
+		"description": "Notify QuantumLeap of Operation changes",
+		"subject": 
+		{
+			"entities": [{"idPattern": ".*", "type": "Operation"}],
+			 "condition": 
+			 {
+                            	"attrs": ["progressDelay","actualProgress","statusChangeTS","actualHours"]
+		    	 }
+	    	},
+		"notification": 
+		{
+			"http": {"url": "http://quantumleap:8668/v2/notify"},
+			"attrs": ["operationNumber","workCenter_id","orderNumber",
+				  "operationNumber","plannedHours","actualHours",
+				  "operationNewStatus","operationOldStatus",
+				  "description","statusChangeTS","totalHours",
+				  "actualProgress","expectedProgress","progressDelay",
+				  "eventTS"]
+	  	}
 	}'
+
+curl -X POST 'http://orion:1026/v2/subscriptions/' \
+        -H 'Content-Type: application/json' \
+        -H 'fiware-service: openiot' \
+        -H 'fiware-servicepath: /' \
+        --data-raw '{
+                "description": "Notify QuantumLeap of all testInfo changes",
+                "subject": {"entities": [{"idPattern": "TestInfo.*"}]},
+                "notification": {
+                        "http": {"url": "http://quantumleap:8668/v2/notify"},
+                        "attrs": ["actualStart","actualEnd","virtualStart","virtualEnd","numberOfOrders","numberOfOperations","numberOfEvents","operationtotalHours"]
+                }
+        }'
+
+
+
+echo -e " \033[1;32mdone\033[0m"
