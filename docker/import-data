@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-printf "\n⏳   Loading order subscriptions \n"
+printf "\n⏳   Loading subscriptions \n"
 
 #Data about the Orders
 #Only the updates made by the Delay Analysis count (condition)
