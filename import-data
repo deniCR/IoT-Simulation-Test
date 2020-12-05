@@ -1,13 +1,10 @@
 #!/bin/bash
-# 
-#  curl commands
-#
-
 set -e
 
 printf "\n⏳   Loading order subscriptions \n"
 
-#O quantim leap será notificado sempre que um dos atributos da condição seja alterado, assumindo que a expressão q seja respeitada ... estes atributos são alterados apenas pelo delayAnalysis ... os restantes atributos provem da DB
+#Data about the Orders
+#Only the updates made by the Delay Analysis count (condition)
 curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	-H 'Content-Type: application/json' \
 	-H 'fiware-service: openiot' \
@@ -25,23 +22,16 @@ curl -X POST 'http://orion:1026/v2/subscriptions/' \
   		},
   		"notification": {
     			"http": {"url": "http://quantumleap:8668/v2/notify"},
-    			"attrs": ["partNumber","orderNumber","orderNewStatus","orderOldStatus","currentOperation","scheduledStart","scheduledEnd","actualProgress","expectedProgress","scheduledDelay","progressDelay","actualStart","actualEnd","site","statusChangeTS","plannedHours","totalNumberOfOperations","currentHours","totalHours"]
+    			"attrs": ["partNumber","orderNumber","orderNewStatus",
+				"orderOldStatus","currentOperation","scheduledStart",
+				"scheduledEnd","actualProgress","expectedProgress",
+				"scheduledDelay","progressDelay","actualStart",
+				"actualEnd","site","statusChangeTS","plannedHours",
+				"totalNumberOfOperations","currentHours","totalHours"]
   		}
 		}'
 
-curl -X POST 'http://orion:1026/v2/subscriptions/' \
-	-H 'Content-Type: application/json' \
-	-H 'fiware-service: openiot' \
-	-H 'fiware-servicepath: /' \
-	--data-raw '{
-		"description": "Notify QuantumLeap of all Part changes",
-		"subject": {"entities": [{"idPattern": "Part.*"}]},
-		"notification": {
-			"http": {"url": "http://quantumleap:8668/v2/notify"},
-			"attrs": ["partNumber","serialNumber","partRev","cemb","description"]
-		}
-	}'
-
+#Data about the workcenters
 curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	-H 'Content-Type: application/json' \
 	-H 'fiware-service: openiot' \
@@ -55,6 +45,7 @@ curl -X POST 'http://orion:1026/v2/subscriptions/' \
 		}
 	}'
 
+#Data about the operations
 curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	-H 'Content-Type: application/json' \
 	-H 'fiware-service: openiot' \
@@ -81,6 +72,7 @@ curl -X POST 'http://orion:1026/v2/subscriptions/' \
 	  	}
 	}'
 
+#Debug info
 curl -X POST 'http://orion:1026/v2/subscriptions/' \
         -H 'Content-Type: application/json' \
         -H 'fiware-service: openiot' \
@@ -90,10 +82,10 @@ curl -X POST 'http://orion:1026/v2/subscriptions/' \
                 "subject": {"entities": [{"idPattern": "TestInfo.*"}]},
                 "notification": {
                         "http": {"url": "http://quantumleap:8668/v2/notify"},
-                        "attrs": ["actualStart","actualEnd","virtualStart","virtualEnd","numberOfOrders","numberOfOperations","numberOfEvents","operationtotalHours"]
+                        "attrs": ["actualStart","actualEnd","virtualStart",
+				"virtualEnd","numberOfOrders","numberOfOperations",
+				"numberOfEvents","operationtotalHours"]
                 }
         }'
-
-
 
 echo -e " \033[1;32mdone\033[0m"
