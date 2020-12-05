@@ -1,3 +1,7 @@
+#
+# Developed from the tutorials provided by FIWARE
+#
+
 version: "3.5"
 services:
   # Orion is the context broker
