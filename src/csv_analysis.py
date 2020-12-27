@@ -98,6 +98,89 @@ def readCSV_percentagem(operation):
 	for order in total:
 		print(total[order])
 
+# No KITTING ...
+def readCSV_p_n_kitting(operation):
+	eventDict = {}
+	totals = {}
+	kitting = {}
+	total_ttt = 0
+	with open(operation, mode='r') as csv_file:
+		operation_dict = csv.DictReader(csv_file)
+		for row in operation_dict:
+
+			old_status = row["OLD_STATUS"]
+			new_status = row["NEW_STATUS"]
+			order_type = row["ORDER_ID"][0:3]
+			order_id = row["ORDER_ID"]
+			if "OPER_ID" in row:
+				operation_id = row["OPER_ID"]
+			else:
+				operation_id = None
+			total_t = "total_t"
+
+			if new_status != 'KITTING':
+
+				if old_status == 'KITTING':
+					if operation_id:
+						if order_id in kitting and operation_id in kitting[order_id]:
+							old_status = kitting[order_id][operation_id]
+							kitting[order_id].update({operation_id: ""})
+					else:
+						if order_id in kitting:
+							old_status = kitting[order_id]
+							kitting.update({order_id: ""})
+
+				if order_type == '300' or order_type == '700':
+					if not (order_type in eventDict):
+						eventDict.update({order_type: {} })
+
+					if not (old_status in totals):
+						totals.update({old_status: 0 })
+
+					if not (old_status in eventDict[order_type]): 
+						eventDict[order_type].update({old_status: {} })
+						eventDict[order_type][old_status].update({total_t: 0 })
+
+					if not (new_status in eventDict[order_type][old_status]):
+						eventDict[order_type][old_status].update({new_status: 0 })
+
+					total_ttt = total_ttt + 1
+					total_tt_value = totals[old_status] + 1
+					total_t_value = eventDict[order_type][old_status][total_t] + 1
+					old_value = eventDict[order_type][old_status][new_status] + 1
+
+					totals[old_status] = total_tt_value
+					eventDict[order_type][old_status].update({new_status: old_value })
+					eventDict[order_type][old_status].update({total_t: total_t_value })
+
+			else:
+				if operation_id:
+					if not(order_id in kitting):
+							kitting.update({order_id: {}})
+					kitting[order_id].update({operation_id: old_status})
+				else:
+					kitting.update({order_id: old_status})
+
+	total = {}
+	total.update({"300": 0})
+	total.update({"700": 0})
+
+	for order in eventDict:
+		print(order)
+		for old_st in eventDict[order]:
+			total_tt = totals[old_st]
+			total_t = eventDict[order][old_st]["total_t"]
+			print(old_st)
+			for new_st in eventDict[order][old_st]:
+				total[order] = total[order] + 100*(eventDict[order][old_st][new_st]/total_ttt/2)
+
+				print(new_st,eventDict[order][old_st][new_st],100*(eventDict[order][old_st][new_st]/total_t))
+			print("---------------------------------------------")
+		print("+++++++++++++++++++++++++++++++++++++++++++++")
+
+	for order in total:
+		print(total[order])
+
 # Read csv files
 def process(orders,operations):
 	eventDict = {}
@@ -166,9 +249,9 @@ def process(orders,operations):
 
 
 def main():
-	readCSV("csv_file/Order.csv")
+	#readCSV("csv_file/Order.csv")
 	print("##############################")
-	readCSV_percentagem("csv_file/Order.csv")
+	readCSV_p_n_kitting("csv_file/Order.csv")
 
 	#process("csv_file/Order.csv","csv_file/operations_change_status_alt_7")
 

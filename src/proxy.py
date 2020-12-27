@@ -73,7 +73,7 @@ def main():
 	test_info.provision()
 
 	while not(stop):
-		sleep(0.1)
+		sleep(0.03)
 		#GET Known work centers from the broker
 		# - There are no updates to this entities ...
 		known_WorkCenters = Entities.getWorkCenters()
@@ -92,9 +92,9 @@ def main():
 			part.provision()
 			del part
 
-		time = 720 * float(os.environ["TIME_SCALE"]) #Events from the last T seconds in real time
+		#time = 300 #Events from the last T seconds in real time (last ~5min)
 
-		#time = int(time/float(os.environ("TIME_SCALE")))
+		time = int(12*3600/float(os.environ['TIME_SCALE'])) # 12h of virtual time
 
 		#GET Known Orders and Operations from the broker
 		known_ordersList, known_OrdersIDs = Entities.getRunningOrders()

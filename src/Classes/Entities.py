@@ -490,7 +490,7 @@ class Order(Entity):
 	def getOrderNumber(self):
 		return self.getAttrValue("orderNumber")
 
-	def getTimeStamp(self):
+	def getTimestamp(self):
 		return self.getAttrValue("statusChangeTS")
 
 	def loadDBEntry(self, row):
@@ -660,7 +660,7 @@ class Order(Entity):
 		self.updateAttrList(attrList)
 
 	def compareTimeStams(self, other):
-		if self.getTimeStamp() > other.getTimeStamp():
+		if self.getTimestamp() > other.getTimestamp():
 			return True
 		else:
 			return False
@@ -708,7 +708,7 @@ class Operation(Entity):
 	def getOrderID(self):
 		return self.getAttrValue("orderNumber")
 
-	def getTimeStamp(self):
+	def getTimestamp(self):
 		return self.getAttrValue("statusChangeTS")
 
 	def loadDBEntry(self, row):
@@ -781,7 +781,7 @@ class Operation(Entity):
 			self.setAttr(name="progressDelay",value="Indeterminate",type="Text")
 
 	def compareTimeStams(self, other):
-		if self.getTimeStamp() > other.getTimeStamp():
+		if self.getTimestamp() > other.getTimestamp():
 			return True
 		else:
 			return False

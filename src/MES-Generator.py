@@ -118,6 +118,8 @@ def main(argv):
 	print("Number of events deployed: " + str(ev_sucessed))
 	print("Number of events failed: " + str(ev_failed))
 
+	print("Events/Second: " +str(ev_sucessed/(end_ev_sim.timestamp()-virtual_start.timestamp())))
+
 	DB_Entities.conn.close()
 
 if __name__ == "__main__":

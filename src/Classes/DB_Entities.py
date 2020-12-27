@@ -29,7 +29,7 @@ def readCSV(order_csv_file,operation_csv_file):
 			order = Order(row)
 
 			while ts in eventDict:
-				ts+=1
+				ts+=0.1
 			eventDict.update({ts: order})
 
 			orderNumber = row["ORDER_ID"]
@@ -43,6 +43,7 @@ def readCSV(order_csv_file,operation_csv_file):
 
 		print("Number of order event readed: " + str(len(eventDict)) + " vs counter: " + str(aux_count))
 
+	numberOfOperations = 0
 	opEventList={}
 	opTotalHours = {}
 	opRunTimeIntervals= {}
@@ -50,14 +51,13 @@ def readCSV(order_csv_file,operation_csv_file):
 	#Open and read from the operation_csv_file
 	with open(operation_csv_file, mode='r') as csv_file:
 		aux_dict = csv.DictReader(csv_file)
-		aux_count=0
 		for row in aux_dict:
 			aux_count+=1
 			ts = (datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S')).timestamp()
 			op = Operation(row)
 
 			while ts in eventDict:
-				ts+=1
+				ts+=0.1
 			eventDict.update({ts: op})
 
 			orderNumber = row["ORDER_ID"]
@@ -71,6 +71,7 @@ def readCSV(order_csv_file,operation_csv_file):
 				opEventList[orderNumber].update({operationNumber: {}})
 				opTotalHours[orderNumber].update({operationNumber: 0})
 				opRunTimeIntervals[orderNumber].update({operationNumber: 0})
+				numberOfOperations+=1
 			opEventList[orderNumber][operationNumber].update({ts: op})
 
 			newOrderEv=None
@@ -84,13 +85,28 @@ def readCSV(order_csv_file,operation_csv_file):
 			if newOrderEv!=None:
 				#Add the newOrderEvent
 				while o_ts in eventDict:
-					o_ts+=1
+					o_ts+=0.1
 				eventDict.update({o_ts: newOrderEv})
 				orderList[orderNumber].update({o_ts: newOrderEv})
+				aux_count+=1
 
-		print("Number of opEvents readed: " + str(len(eventDict)) + " vs counter: " + str(aux_count))
+		for orderN in orderList:
+			first_event = min(orderList[orderN])
+			last_event = max(orderList[orderN])
+			interval = last_event-first_event
+			real_interval = orderList[orderN][last_event].getTimestamp() - orderList[orderN][first_event].getTimestamp() 
+			first_event_status = orderList[orderN][first_event].getNewStatus()
+			last_event_status = orderList[orderN][last_event].getNewStatus()
+			if (real_interval < 1800 and last_event_status in ("CANCELLED","COMPLETE")) or (first_event in ("CANCELLED","COMPLETE")):
+				print("ORDER COMPLETE ..." + str(orderN))
+				print(str(real_interval))
+				for ts,order in orderList[orderN].items():
+					print("\t" + str(ts) + " " + str(order.getNewStatus()))
+				print("\n")
 
-		#Set actual totalHours per operation
+		print("Number of orderEvents + opEvents readed: " + str(len(eventDict)) + " vs counter: " + str(aux_count))
+
+		#Set actual totalHours per operation and order
 		for orderN in opEventList:
 
 			if not (orderN in orderTotalHours):
@@ -183,7 +199,7 @@ def readCSV(order_csv_file,operation_csv_file):
 									#print("\t\t timeShift: " + str(timeShift))
 									eventTS = (runStart + timeShift)
 									while eventTS in eventDict:
-										eventTS+=1
+										eventTS+=0.1
 									#print("\t\tevent timestamp: " + str(eventTS))
 									if (eventTS < runStart) or (eventTS > ts):
 										print("ERROR: evTS-start = " + str(eventTS - runStart) + "  end-evTS = " + str(ts-eventTS))
@@ -204,18 +220,36 @@ def readCSV(order_csv_file,operation_csv_file):
 	print("Total events: " + str(numberOfEvents))
 
 	numberOfOrders = len(orderTotalHours)
-	numberOfOperations = 0
+	#numberOfOperations = 0
 	operationsTotalHours = 0
 	for operationList in opTotalHours.values():
-		numberOfOperations+=len(operationList)
+		#numberOfOperations+=len(operationList)
 		operationsTotalHours+=sum(operationList.values())
 
 	return eventDict,numberOfOrders,numberOfOperations,operationsTotalHours,numberOfEvents
 
+#check if the only orderEvent is a terminal status
+#Remove completed orders or orders that have a
+def checkOrderFirstStatus(orderList):
+	for orderN in orderList:
+		first_event = min(orderList[orderN])
+		last_event = max(orderList[orderN])
+		interval = last_event-first_event
+		real_interval = orderList[orderN][last_event].getTimestamp() - orderList[orderN][first_event].getTimestamp() 
+		print(str(real))
+		if real_interval < 3600 or (orderList[orderN][first_event].getNewStatus() in ("CANCELLED","COMPLETE")):
+			print("ORDER COMPLETE ..." + str(orderN))
+			print("\n")
+			for ts,order in orderList[orderN].items():
+				print("\t" + str(ts) + " " + str(order.getNewStatus()))
+			return False
+
+	return True
+
 #Checks the consistency of order events 
 # ensure that there is at least one order event prior to the event of this operation
 def checkPrevOrderEvents(op,orderList):
-	op_ts = op.getTimeStamp()
+	op_ts = op.getTimestamp()
 	priorOrderEvent = False
 	if orderList==None:
 		priorOrderEvent = False
@@ -597,7 +631,7 @@ class Operation():
 	def getActualHours(self):
 		return self.actualHours
 
-	def getTimeStamp(self):
+	def getTimestamp(self):
 		return self.statusChangeTS
 
 	def getTotalHours(self):
@@ -768,9 +802,9 @@ def readNewOrders(knownOrders, time):
 
 		cur.execute("""SELECT * FROM order_status_changes 
 						WHERE updatets >= (NOW() - interval '""" + str(time) + """ seconds') 
-						""" + query + """ 
-						AND orderNumber NOT IN (SELECT orders_ended()) 
-						ORDER BY updatets desc;""")
+						""" + query + 
+						""" AND orderNumber NOT IN (SELECT orders_ended()) """ + 
+						""" ORDER BY updatets desc;""")
 		data = cur.fetchall()
 
 		for order in data:
@@ -784,7 +818,7 @@ def readNewOrders(knownOrders, time):
 
 			#Get only the last update/statusChanges Or get all the updates and insert the updates in order ???
 			if orderNumber in OrderList:
-				if OrderList[orderNumber].getTimeStamp() < ord.getTimeStamp():
+				if OrderList[orderNumber].getTimestamp() < ord.getTimestamp():
 					OrderList[orderNumber]=ord
 			else:
 				OrderList.update({orderNumber: ord})
@@ -814,7 +848,7 @@ def readKnownOrders(knownOrders, time):
 
 				#Get only the last update/statusChanges Or get all the updates and insert the updates in order ???
 				if orderNumber in OrderList:
-					if OrderList[orderNumber].getTimeStamp() < ord.getTimeStamp():
+					if OrderList[orderNumber].getTimestamp() < ord.getTimestamp():
 						OrderList[orderNumber]=ord
 				else:
 					OrderList.update({orderNumber: ord})
@@ -854,7 +888,7 @@ def readNewOperation(orderNumber, known_Operations, knownEnded_Operations, time)
 
 			#Get only the last update/statusChanges Or get all the updates and insert the updates in order ???
 			if operationNumber in OperationList:
-				if OperationList[operationNumber].getTimeStamp() < op.getTimeStamp():
+				if OperationList[operationNumber].getTimestamp() < op.getTimestamp():
 					OperationList[operationNumber] = op
 			else:
 				OperationList.update({operationNumber: op})
@@ -890,7 +924,7 @@ def readKnownOperations(orderNumber, known_Operations, time):
 
 			#Get only the last update/statusChanges Or get all the updates and insert the updates in order ???
 			if operationNumber in OperationList:
-				if OperationList[operationNumber].getTimeStamp() < op.getTimeStamp():
+				if OperationList[operationNumber].getTimestamp() < op.getTimestamp():
 					OperationList[operationNumber] = op
 			else:
 				OperationList.update({operationNumber: op})
