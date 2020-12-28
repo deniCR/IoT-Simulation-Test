@@ -309,11 +309,12 @@ class Entity:
 	#The load function will load all the information from the json object
 	def load(self, entity):
 
+		print("Entidade:" + str(entity) + " " + len(entity))
 		if isinstance(entity,dict):
 			json_entity = entity
 		else:
-			entity_decode = entity.decode().replace('\n','')  
-			json_entity = json.loads(entity_decode)
+			print("Entidade:" + str(entity) + " " + len(entity))
+			json_entity = json.loads(entity)
 
 		if "id" in json_entity:
 			self.id = json_entity["id"]
