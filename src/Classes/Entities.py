@@ -60,7 +60,7 @@ def getRunningOrders():
 
 	while numberOfOrders < numberOfEntities:
 		if numberOfOrders + limit > numberOfEntities:
-			limit = numberOfEntities - numberOfOperations
+			limit = numberOfEntities - numberOfOrders
 		#O offset determina o ponto de partida de onde os elementos devem se considerados ...
 		offSet = str(len(orderList))
 
