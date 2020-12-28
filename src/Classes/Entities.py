@@ -153,8 +153,9 @@ def getRunningOperations():
 	return operationList,strings
 
 def getEndedOperations():
-	query = HTTP.entities_url + "/?q=operationNewStatus=='COMPLETE','CANCELLED'&type=Operation&options=keyValues,count&limit=1000"
+	query = HTTP.entities_url + "/?q=operationNewStatus=='COMPLETE','CANCELLED'&type=Operation&options=keyValues,count"
 
+	limit = 1000
 	numberOfEntities = 1
 	numberOfOperations = 0
 	json_entity = {}
@@ -162,9 +163,11 @@ def getEndedOperations():
 	offSet="0"
 
 	while numberOfOperations < numberOfEntities:
+		if numberOfOperations + limit > numberOfEntities:
+			limit = numberOfEntities - numberOfOperations
 		offSet = str(numberOfOperations)
 
-		response,headers = HTTP.sendRequest("GET",query + "&offset=" + offSet,HTTP.headers_get_iot)
+		response,headers = HTTP.sendRequest("GET",query + "&limit=" + str(limit) + "&offset=" + offSet,HTTP.headers_get_iot)
 
 		if "Fiware-Total-Count" in headers:
 			numberOfEntities=int(headers["Fiware-Total-Count"])
