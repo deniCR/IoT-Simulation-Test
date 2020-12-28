@@ -72,7 +72,7 @@ def getRunningOrders():
 
 		if "error" in json_entity:
 			json_entity = {}
-			limit = limit/2
+			limit = int(limit/2)
 			if limit <= 1:
 				numberOfOrders = numberOfEntities
 
@@ -124,7 +124,7 @@ def getRunningOperations():
 
 		if "error" in json_entity:
 			json_entity = {}
-			limit = limit/2
+			limit = int(limit/2)
 			if limit <= 1:
 				numberOfOperations = numberOfEntities
 
@@ -186,7 +186,7 @@ def getEndedOperations():
 
 		if "error" in json_entity:
 			json_entity = {}
-			limit = limit/2
+			limit = int(limit/2)
 			if limit <= 1:
 				numberOfOperations = numberOfEntities
 
