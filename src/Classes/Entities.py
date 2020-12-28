@@ -157,7 +157,8 @@ def getEndedOperations():
 
 		for o in json_entity:
 			operation = Operation()
-			operation.loadJsonEntity(o)
+			oo = o.decode().replace('\n','')  
+			operation.loadJsonEntity(oo)
 			orderNumber = operation.getOrderNumber()
 			operationNumber = operation.getOperationID()
 
@@ -309,17 +310,15 @@ class Entity:
 	#The load function will load all the information from the json object
 	def load(self, entity):
 
-		if entity!=None:
-			if isinstance(entity,dict):
-				json_entity = entity
-			else:
-				print(entity)
-				json_entity = json.loads(entity)
+		if isinstance(entity,dict):
+			json_entity = entity
+		else:
+			json_entity = json.loads(entity)
 
-			if "id" in json_entity:
-				self.id = json_entity["id"]
-			if "type" in json_entity:
-				self.type = json_entity["type"]
+		if "id" in json_entity:
+			self.id = json_entity["id"]
+		if "type" in json_entity:
+			self.type = json_entity["type"]
 
 		self.json_entity = json_entity
 
