@@ -76,7 +76,7 @@ def getRunningOrders():
 			order = Order()
 			order.loadJsonEntity(o)
 			orderList.update({order.getOrderID(): (order)})
-			numberofOrders+=1
+			numberofOrders = numberOfOrders + 1
 	
 	string = None
 
@@ -119,7 +119,9 @@ def getRunningOperations():
 
 		if "error" in json_entity:
 			json_entity = {}
-			numberOfOperations=numberOfEntities
+			limit = limit/2
+			if limit <= 1:
+				numberOfOperations = numberOfEntities
 
 		for o in json_entity:
 
@@ -133,7 +135,7 @@ def getRunningOperations():
 
 			if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
 				operationList[orderNumber].update({operationNumber: (operation)})
-				numberOfOperations=+1
+				numberOfOperations = numberOfOperations + 1
 
 	strings = {}
 
@@ -174,7 +176,9 @@ def getEndedOperations():
 
 		if "error" in json_entity:
 			json_entity = {}
-			numberOfOperations=numberOfEntities
+			limit = limit/2
+			if limit <= 1:
+				numberOfOperations = numberOfEntities
 
 		print("JSON: " + str(json))
 
