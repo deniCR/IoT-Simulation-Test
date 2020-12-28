@@ -111,6 +111,7 @@ def getRunningOperations():
 
 		if "error" in json_entity:
 			json_entity = {}
+			numberOfOperations=numberOfEntities
 
 		for o in json_entity:
 
@@ -165,6 +166,7 @@ def getEndedOperations():
 
 		if "error" in json_entity:
 			json_entity = {}
+			numberOfOperations=numberOfEntities
 
 		print("JSON: " + str(json))
 
