@@ -59,8 +59,6 @@ def getRunningOrders():
 	offSet="0"
 
 	while numberOfOrders < numberOfEntities:
-		if numberOfOrders + limit > numberOfEntities:
-			limit = numberOfEntities - numberOfOrders
 		#O offset determina o ponto de partida de onde os elementos devem se considerados ...
 		offSet = str(len(orderList))
 
@@ -77,6 +75,9 @@ def getRunningOrders():
 			order.loadJsonEntity(o)
 			orderList.update({order.getOrderID(): (order)})
 			numberofOrders = numberOfOrders + 1
+
+		if numberOfOrders + limit > numberOfEntities:
+			limit = numberOfEntities - numberOfOrders
 	
 	string = None
 
@@ -102,8 +103,6 @@ def getRunningOperations():
 	offSet="0"
 
 	while numberOfOperations < numberOfEntities:
-		if numberOfOperations + limit > numberOfEntities:
-			limit = numberOfEntities - numberOfOperations
 		#O offset determina o ponto de partida de onde os elementos devem se considerados ...
 		offSet = str(numberOfOperations)
 
@@ -137,6 +136,9 @@ def getRunningOperations():
 				operationList[orderNumber].update({operationNumber: (operation)})
 				numberOfOperations = numberOfOperations + 1
 
+		if numberOfOperations + limit > numberOfEntities:
+			limit = numberOfEntities - numberOfOperations
+
 	strings = {}
 
 	if len(operationList) > 0:
@@ -163,8 +165,7 @@ def getEndedOperations():
 	offSet="0"
 
 	while numberOfOperations < numberOfEntities:
-		if numberOfOperations + limit > numberOfEntities:
-			limit = numberOfEntities - numberOfOperations
+
 		offSet = str(numberOfOperations)
 
 		response,headers = HTTP.sendRequest("GET",query + "&limit=" + str(limit) + "&offset=" + offSet,HTTP.headers_get_iot)
@@ -198,6 +199,9 @@ def getEndedOperations():
 			if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
 				operationList[orderNumber].update({operationNumber: (operation)})
 				numberOfOperations = numberOfOperations + 1
+
+		if numberOfOperations + limit > numberOfEntities:
+			limit = numberOfEntities - numberOfOperations
 
 	strings = {}
 
