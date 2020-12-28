@@ -49,18 +49,22 @@ def getParts():
 #Ao contrário das restantes entidades, as orders podem superar o limite de 1000 entidades com facilidade ...
 #Para contornar isso, os pedidos são repetidos consoante o número de entidades que satisfazem os critérios da query ...
 def getRunningOrders():
-	query = HTTP.entities_url + "/?q=orderNewStatus!='COMPLETE';orderNewStatus!='CANCELLED'&type=Order&options=keyValues,count&attrs=id,orderNumber,statusChangeTS&limit=1000"
+	query = HTTP.entities_url + "/?q=orderNewStatus!='COMPLETE';orderNewStatus!='CANCELLED'&type=Order&options=keyValues,count&attrs=id,orderNumber,statusChangeTS"
 
+	limit = 1000
 	numberOfEntities = 1
+	numberOfOrders = 0
 	json_entity = {}
 	orderList = {}
 	offSet="0"
 
-	while len(orderList) < numberOfEntities:
+	while numberOfOrders < numberOfEntities:
+		if numberOfOrders + limit > numberOfEntities:
+			limit = numberOfEntities - numberOfOperations
 		#O offset determina o ponto de partida de onde os elementos devem se considerados ...
 		offSet = str(len(orderList))
 
-		response, headers = HTTP.sendRequest("GET",query + "&offset=" + offSet,HTTP.headers_get_iot)
+		response, headers = HTTP.sendRequest("GET",query + "&limit=" + str(limit) + "&offset=" + offSet,HTTP.headers_get_iot)
 
 		if "Fiware-Total-Count" in headers:
 			numberOfEntities=int(headers["Fiware-Total-Count"])
@@ -72,6 +76,7 @@ def getRunningOrders():
 			order = Order()
 			order.loadJsonEntity(o)
 			orderList.update({order.getOrderID(): (order)})
+			numberofOrders+=1
 	
 	string = None
 
@@ -87,8 +92,9 @@ def getRunningOrders():
 
 #Pode não ser necessário colletar todas as operações ... Pode ser feito para cada order ... ???
 def getRunningOperations():
-	query = HTTP.entities_url + "/?q=operationNewStatus!='COMPLETE';operationNewStatus!='CANCELLED'&type=Operation&options=keyValues,count&limit=1000"
+	query = HTTP.entities_url + "/?q=operationNewStatus!='COMPLETE';operationNewStatus!='CANCELLED'&type=Operation&options=keyValues,count"
 
+	limit = 1000
 	numberOfEntities = 1
 	numberOfOperations = 0
 	json_entity = {}
@@ -96,10 +102,12 @@ def getRunningOperations():
 	offSet="0"
 
 	while numberOfOperations < numberOfEntities:
+		if numberOfOperations + limit > numberOfEntities:
+			limit = numberOfEntities - numberOfOperations
 		#O offset determina o ponto de partida de onde os elementos devem se considerados ...
 		offSet = str(numberOfOperations)
 
-		response,headers = HTTP.sendRequest("GET",query + "&offset=" + offSet,HTTP.headers_get_iot)
+		response,headers = HTTP.sendRequest("GET",query + "&limit=" + str(limit) + "&offset=" + offSet,HTTP.headers_get_iot)
 
 		if "Fiware-Total-Count" in headers:
 			numberOfEntities=int(headers["Fiware-Total-Count"])
@@ -125,7 +133,7 @@ def getRunningOperations():
 
 			if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
 				operationList[orderNumber].update({operationNumber: (operation)})
-				numberOfOperations = numberOfOperations + 1
+				numberOfOperations=+1
 
 	strings = {}
 
