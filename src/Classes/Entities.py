@@ -309,16 +309,17 @@ class Entity:
 	#The load function will load all the information from the json object
 	def load(self, entity):
 
-		if isinstance(entity,dict):
-			json_entity = entity
-		else:
-			print(entity)
-			json_entity = json.loads(entity)
+		if entity!=None:
+			if isinstance(entity,dict):
+				json_entity = entity
+			else:
+				print(entity)
+				json_entity = json.loads(entity)
 
-		if "id" in json_entity:
-			self.id = json_entity["id"]
-		if "type" in json_entity:
-			self.type = json_entity["type"]
+			if "id" in json_entity:
+				self.id = json_entity["id"]
+			if "type" in json_entity:
+				self.type = json_entity["type"]
 
 		self.json_entity = json_entity
 
@@ -670,7 +671,7 @@ class Order(Entity):
 	def deleteAll(self):
 		super().delete()
 
-		query = HTTP.entities_url + "/?q=orderNumber=='" + self.getOrderID() + "'&type=Operation&options=keyValues&attrs=id&limit=100"
+		query = HTTP.entities_url + "/?q=orderNumber=='" + self.getOrderID() + "'&type=Operation&options=keyValues&attrs=id&limit=1000"
 
 		response,headers = HTTP.sendRequest("GET",query,HTTP.headers_get_iot)
 
