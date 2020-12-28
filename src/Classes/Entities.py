@@ -110,7 +110,7 @@ def getRunningOperations():
 			json_entity = json.loads(response)
 
 		for o in json_entity:
-			if o!="error":
+			if o[0]!='{':
 				operation = Operation()
 				operation.loadJsonEntity(o)
 				orderNumber = operation.getOrderNumber()
@@ -163,8 +163,7 @@ def getEndedOperations():
 		print("JSON: " + str(json_entity))
 
 		for o in json_entity:
-			print("Entidade: " + str(o))
-			if o!="error":
+			if o[0]!='{':
 				operation = Operation()
 				operation.loadJsonEntity(o)
 				orderNumber = operation.getOrderNumber()
