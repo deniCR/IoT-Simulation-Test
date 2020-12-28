@@ -109,19 +109,22 @@ def getRunningOperations():
 		if response != None:
 			json_entity = json.loads(response)
 
+		if "error" in json_entity:
+			json_entity = {}
+
 		for o in json_entity:
-			if o[0]!='{':
-				operation = Operation()
-				operation.loadJsonEntity(o)
-				orderNumber = operation.getOrderNumber()
-				operationNumber = operation.getOperationID()
 
-				if not orderNumber in operationList:
-					operationList.update({orderNumber: {}})
+			operation = Operation()
+			operation.loadJsonEntity(o)
+			orderNumber = operation.getOrderNumber()
+			operationNumber = operation.getOperationID()
 
-				if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
-					operationList[orderNumber].update({operationNumber: (operation)})
-					numberOfOperations = numberOfOperations + 1
+			if not orderNumber in operationList:
+				operationList.update({orderNumber: {}})
+
+			if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
+				operationList[orderNumber].update({operationNumber: (operation)})
+				numberOfOperations = numberOfOperations + 1
 
 	strings = {}
 
@@ -160,21 +163,24 @@ def getEndedOperations():
 		if response != None:
 			json_entity = json.loads(response)
 
-		print("JSON: " + str(json_entity))
+		if "error" in json_entity:
+			json_entity = {}
+
+		print("JSON: " + str(json))
 
 		for o in json_entity:
-			if o[0]!='{':
-				operation = Operation()
-				operation.loadJsonEntity(o)
-				orderNumber = operation.getOrderNumber()
-				operationNumber = operation.getOperationID()
 
-				if not orderNumber in operationList:
-					operationList.update({orderNumber: {}})
+			operation = Operation()
+			operation.loadJsonEntity(o)
+			orderNumber = operation.getOrderNumber()
+			operationNumber = operation.getOperationID()
 
-				if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
-					operationList[orderNumber].update({operationNumber: (operation)})
-					numberOfOperations = numberOfOperations + 1
+			if not orderNumber in operationList:
+				operationList.update({orderNumber: {}})
+
+			if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
+				operationList[orderNumber].update({operationNumber: (operation)})
+				numberOfOperations = numberOfOperations + 1
 
 	strings = {}
 
