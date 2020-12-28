@@ -160,7 +160,10 @@ def getEndedOperations():
 		if response != None:
 			json_entity = json.loads(response)
 
+		print("JSON: " + str(json_entity))
+
 		for o in json_entity:
+			print("Entidade: " + str(o))
 			if o!="error":
 				operation = Operation()
 				operation.loadJsonEntity(o)
