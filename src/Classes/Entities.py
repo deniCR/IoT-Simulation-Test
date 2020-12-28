@@ -104,21 +104,24 @@ def getRunningOperations():
 		if "Fiware-Total-Count" in headers:
 			numberOfEntities=int(headers["Fiware-Total-Count"])
 
+		print("Numero de entidade: " + str(numberOfEntities))
+
 		if response != None:
 			json_entity = json.loads(response)
 
 		for o in json_entity:
-			operation = Operation()
-			operation.loadJsonEntity(o)
-			orderNumber = operation.getOrderNumber()
-			operationNumber = operation.getOperationID()
+			if o!="error":
+				operation = Operation()
+				operation.loadJsonEntity(o)
+				orderNumber = operation.getOrderNumber()
+				operationNumber = operation.getOperationID()
 
-			if not orderNumber in operationList:
-				operationList.update({orderNumber: {}})
+				if not orderNumber in operationList:
+					operationList.update({orderNumber: {}})
 
-			if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
-				operationList[orderNumber].update({operationNumber: (operation)})
-				numberOfOperations = numberOfOperations + 1
+				if not (operationNumber in operationList[orderNumber]) or operation.compareTimeStams(operationList[orderNumber][operationNumber]):
+					operationList[orderNumber].update({operationNumber: (operation)})
+					numberOfOperations = numberOfOperations + 1
 
 	strings = {}
 
@@ -308,13 +311,11 @@ class Entity:
 
 	#The load function will load all the information from the json object
 	def load(self, entity):
-		json_entity = {}
 
 		if isinstance(entity,dict):
 			json_entity = entity
 		else:
-			if entity!="error":
-				json_entity = json.loads(entity)
+			json_entity = json.loads(entity)
 
 		if "id" in json_entity:
 			self.id = json_entity["id"]
