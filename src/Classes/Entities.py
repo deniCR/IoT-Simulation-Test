@@ -157,8 +157,7 @@ def getEndedOperations():
 
 		for o in json_entity:
 			operation = Operation()
-			oo = o.decode().replace('\n','')  
-			operation.loadJsonEntity(oo)
+			operation.loadJsonEntity(o)
 			orderNumber = operation.getOrderNumber()
 			operationNumber = operation.getOperationID()
 
@@ -313,7 +312,8 @@ class Entity:
 		if isinstance(entity,dict):
 			json_entity = entity
 		else:
-			json_entity = json.loads(entity)
+			entity_decode = entity.decode().replace('\n','')  
+			json_entity = json.loads(entity_decode)
 
 		if "id" in json_entity:
 			self.id = json_entity["id"]
