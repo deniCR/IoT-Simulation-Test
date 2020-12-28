@@ -308,6 +308,7 @@ class Entity:
 
 	#The load function will load all the information from the json object
 	def load(self, entity):
+		json_entity = {}
 
 		if isinstance(entity,dict):
 			json_entity = entity
