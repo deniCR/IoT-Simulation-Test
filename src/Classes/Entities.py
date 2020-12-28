@@ -49,7 +49,7 @@ def getParts():
 #Ao contrário das restantes entidades, as orders podem superar o limite de 1000 entidades com facilidade ...
 #Para contornar isso, os pedidos são repetidos consoante o número de entidades que satisfazem os critérios da query ...
 def getRunningOrders():
-	query = HTTP.entities_url + "/?q=orderNewStatus!='COMPLETE';orderNewStatus!='CANCELLED'&type=Order&options=keyValues,count&attrs=id,orderNumber,statusChangeTS&limit=100"
+	query = HTTP.entities_url + "/?q=orderNewStatus!='COMPLETE';orderNewStatus!='CANCELLED'&type=Order&options=keyValues,count&attrs=id,orderNumber,statusChangeTS&limit=1000"
 
 	numberOfEntities = 1
 	json_entity = {}
@@ -87,7 +87,7 @@ def getRunningOrders():
 
 #Pode não ser necessário colletar todas as operações ... Pode ser feito para cada order ... ???
 def getRunningOperations():
-	query = HTTP.entities_url + "/?q=operationNewStatus!='COMPLETE';operationNewStatus!='CANCELLED'&type=Operation&options=keyValues,count&limit=100"
+	query = HTTP.entities_url + "/?q=operationNewStatus!='COMPLETE';operationNewStatus!='CANCELLED'&type=Operation&options=keyValues,count&limit=1000"
 
 	numberOfEntities = 1
 	numberOfOperations = 0
@@ -136,7 +136,7 @@ def getRunningOperations():
 	return operationList,strings
 
 def getEndedOperations():
-	query = HTTP.entities_url + "/?q=operationNewStatus=='COMPLETE','CANCELLED'&type=Operation&options=keyValues,count&limit=100"
+	query = HTTP.entities_url + "/?q=operationNewStatus=='COMPLETE','CANCELLED'&type=Operation&options=keyValues,count&limit=1000"
 
 	numberOfEntities = 1
 	numberOfOperations = 0
@@ -312,6 +312,7 @@ class Entity:
 		if isinstance(entity,dict):
 			json_entity = entity
 		else:
+			print(entity)
 			json_entity = json.loads(entity)
 
 		if "id" in json_entity:
@@ -669,7 +670,7 @@ class Order(Entity):
 	def deleteAll(self):
 		super().delete()
 
-		query = HTTP.entities_url + "/?q=orderNumber=='" + self.getOrderID() + "'&type=Operation&options=keyValues&attrs=id&limit=1000"
+		query = HTTP.entities_url + "/?q=orderNumber=='" + self.getOrderID() + "'&type=Operation&options=keyValues&attrs=id&limit=100"
 
 		response,headers = HTTP.sendRequest("GET",query,HTTP.headers_get_iot)
 
