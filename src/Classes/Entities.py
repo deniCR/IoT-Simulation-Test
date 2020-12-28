@@ -70,6 +70,12 @@ def getRunningOrders():
 		if response != None:
 			json_entity = json.loads(response)
 
+		if "error" in json_entity:
+			json_entity = {}
+			limit = limit/2
+			if limit <= 1:
+				numberofOrders = numberOfEntities
+
 		for o in json_entity:
 			order = Order()
 			order.loadJsonEntity(o)
