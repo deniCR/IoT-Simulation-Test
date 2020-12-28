@@ -74,13 +74,13 @@ def getRunningOrders():
 			json_entity = {}
 			limit = limit/2
 			if limit <= 1:
-				numberofOrders = numberOfEntities
+				numberOfOrders = numberOfEntities
 
 		for o in json_entity:
 			order = Order()
 			order.loadJsonEntity(o)
 			orderList.update({order.getOrderID(): (order)})
-			numberofOrders = numberOfOrders + 1
+			numberOfOrders = numberOfOrders + 1
 
 		if numberOfOrders + limit > numberOfEntities:
 			limit = numberOfEntities - numberOfOrders
