@@ -94,7 +94,7 @@ def main():
 
 		#time = 300 #Events from the last T seconds in real time (last ~5min)
 
-		time = int(12*3600/float(os.environ['TIME_SCALE'])) # 12h of virtual time
+		time = int(24*3600/float(os.environ['TIME_SCALE'])) # Xh of virtual time
 
 		#GET Known Orders and Operations from the broker
 		known_ordersList, known_OrdersIDs = Entities.getRunningOrders()

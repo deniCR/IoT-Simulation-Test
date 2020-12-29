@@ -664,7 +664,10 @@ class Operation():
 		conn.commit()
 
 	def setUpdateTS(self,timestamp):
-		self.updateTS = timestamp
+		if timestamp%1 == 0:
+			self.updateTS=float(timestamp+0.01)
+		else:
+			self.updateTS = timestamp
 
 	def insert(self):
 		with conn.cursor() as cur:
