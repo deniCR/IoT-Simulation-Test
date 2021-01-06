@@ -102,6 +102,22 @@ services:
   #  volumes:
   #    - grafana:/var/lib/grafana
 
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    restart: always
+    hostname: postgres
+    container_name: postgres
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-client}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      POSTGRES_DB: ${POSTGRES_DB:-Fake_MES_DB}
+      PGDATA: /data
+    volumes:
+      - postgres:/data
+
+
 networks:
   default:
     ipam:
@@ -111,4 +127,5 @@ networks:
 volumes:
   mongo-db: ~
   crate-db: ~
+  postgres: ~
   #grafana: ~

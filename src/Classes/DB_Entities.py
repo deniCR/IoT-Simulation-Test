@@ -9,7 +9,7 @@ from termcolor import colored
 from . import Entities
 from . import Devices
 
-conn = psycopg2.connect("dbname=" + os.environ['DB_NAME'] + " user=" + os.environ['DB_USER'] + " password=" + os.environ['DB_PASSWORD'] + " host=" + os.environ['DB_IP_ADDRESS'] + " port=" + os.environ['DB_PORT_ADDRESS'])
+conn = psycopg2.connect("dbname=" + os.environ['POSTGRES_DB'] + " user=" + os.environ['POSTGRES_USER'] + " password=" + os.environ['POSTGRES_PASSWORD'] + " host=" + os.environ['POSTGRES_IP'] + " port=" + os.environ['POSTGRES_PORT'])
 
 # Read all events from the order and operation files
 def readCSV(order_csv_file,operation_csv_file):
@@ -171,9 +171,6 @@ def readCSV(order_csv_file,operation_csv_file):
 						eventsInterval = 1
 					runStart = None
 
-					#print("\nEvent per operation: " + str(orderN) + str(operationN))
-					#print("\tmin events: " + str(eventsInterval))
-
 					for ts,opEvent in opEventList[orderN][operationN].items():
 
 						opEvent.setTotalHours(totalHours)
@@ -188,23 +185,16 @@ def readCSV(order_csv_file,operation_csv_file):
 								else:
 									x = eventsInterval
 
-								#print("\tstart: " + str(runStart) + " end: " + str(ts))
-								#print("\t\tevent interval: " + str(interval))
-								#print("\t\tevents per Interval: " + str(x))
 								for i in range(0,x):
 									i_aux = i+1
 									x_aux = x+1
-									#print("\t\t(i,x) " + str(i_aux) + " " + str(x_aux) + " percentage: + " + str(i_aux/x_aux))
 									timeShift = interval*(i_aux/x_aux)
-									#print("\t\t timeShift: " + str(timeShift))
 									eventTS = (runStart + timeShift)
 									while eventTS in eventDict:
 										eventTS+=0.1
-									#print("\t\tevent timestamp: " + str(eventTS))
 									if (eventTS < runStart) or (eventTS > ts):
 										print("ERROR: evTS-start = " + str(eventTS - runStart) + "  end-evTS = " + str(ts-eventTS))
 									hoursBefEvent = float((interval*(1-(i_aux/x_aux)))/3600)
-									#print("\t\thours before event: " + str(hoursBefEvent))
 									newSensorEvent = SensorEvent(opEvent,eventTS,(-hoursBefEvent),totalHours,runStart)
 									eventDict.update({eventTS: newSensorEvent})
 							else:
@@ -288,11 +278,11 @@ def dropTable(cur,table):
 		cur.execute("DROP TABLE %s CASCADE;" % (table,))
 
 # Insert WC, Parts - from csv files
-def setStaticEntities(workcenter_file,part_file):
+def setDatabase():
 	#Delete/Drop existing tables 
 	with conn.cursor() as cur:
 		dropTable(cur,'workcenter')
-		dropTable(cur,'part')
+		#dropTable(cur,'part')
 		dropTable(cur,'order_status_changes')
 		dropTable(cur,'operation_status_changes')
 		dropTable(cur,'sensor_events')
@@ -303,24 +293,27 @@ def setStaticEntities(workcenter_file,part_file):
 		cur.execute(workcenter_table)
 		print("Create WC table ...")
 
-		cur.execute(part_table)
-		print("Create Part table ...")
+		#cur.execute(part_table)
+		#print("Create Part table ...")
 
-		with open(part_file, 'r') as f:
-			reader = csv.reader(f)
-			next(reader) # Skip the header row.
-			for row in reader:
-				cur.execute(
-					"INSERT INTO part VALUES (%s, %s, %s, %s, %s)",
-					row
-				)
-			f.close()
+		#with open(part_file, 'r') as f:
+		#	reader = csv.reader(f)
+		#	next(reader) # Skip the header row.
+		#	for row in reader:
+		#		cur.execute(
+		#			"INSERT INTO part VALUES (%s, %s, %s, %s, %s)",
+		#			row
+		#		)
+		#	f.close()
 
 		cur.execute(order_status_changes_table)
 		print("Create Order table ...")
+		cur.execute(orders_ended_function)
+		cur.execute(orders_tot_function)
 
 		cur.execute(operation_status_changes_table)
 		print("Create Operation table ...")
+		cur.execute(operations_tot_function)
 
 		cur.execute(sensor_event_table)
 		print("Create sensor_events table ...")
@@ -330,6 +323,44 @@ def setStaticEntities(workcenter_file,part_file):
 
 	conn.commit()
 
+orders_ended_function = """CREATE OR REPLACE FUNCTION public.orders_ended()
+				    RETURNS SETOF character varying
+				    LANGUAGE 'sql'
+				    
+				AS $BODY$
+				SELECT orderNumber
+				FROM order_status_changes
+				WHERE ordernewstatus = 'COMPLETE' or ordernewstatus = 'CANCELLED'
+				GROUP BY orderNumber
+				$BODY$;
+"""
+
+operations_tot_function = """CREATE OR REPLACE FUNCTION public.tot_operations()
+						    RETURNS bigint
+						    LANGUAGE 'sql'
+						    
+						AS $BODY$
+						SELECT count(operationnumber)
+						FROM
+							(SELECT ordernumber,operationnumber
+							FROM operation_status_changes
+							GROUP BY ordernumber,operationnumber) as foo;
+$BODY$;
+"""
+
+orders_tot_function = """CREATE OR REPLACE FUNCTION public.tot_orders()
+							    RETURNS bigint
+							    LANGUAGE 'sql'
+							    
+							AS $BODY$
+							SELECT count(ordernumber)
+							FROM
+								(SELECT ordernumber
+								FROM order_status_changes
+								GROUP BY ordernumber) as foo;
+							$BODY$;
+"""
+
 workcenter_table = """	CREATE TABLE workcenter
 					(
 						denomination VARCHAR(75) NOT NULL,
@@ -338,24 +369,23 @@ workcenter_table = """	CREATE TABLE workcenter
 					);
 					"""
 
-part_table = 	"""	CREATE TABLE part
-					(
-						partNumber VARCHAR(75) NOT NULL,
-						serialNumber VARCHAR(75) NOT NULL,
-						description VARCHAR(75) NOT NULL,
-						partRev VARCHAR(75) NOT NULL,
-						cemb VARCHAR(75) NOT NULL,
-						id INT GENERATED ALWAYS AS IDENTITY,
-						PRIMARY KEY (id)
-					);
-				"""
+#part_table = 	"""	CREATE TABLE part
+#					(
+#						partNumber VARCHAR(75) NOT NULL,
+#						serialNumber VARCHAR(75) NOT NULL,
+#						description VARCHAR(75) NOT NULL,
+#						partRev VARCHAR(75) NOT NULL,
+#						cemb VARCHAR(75) NOT NULL,
+#						id INT GENERATED ALWAYS AS IDENTITY,
+#						PRIMARY KEY (id)
+#					);
+#				"""
 
 order_status_changes_table = 	"""	CREATE TABLE order_status_changes
 									(
 										orderNumber VARCHAR(45) NOT NULL,
 										currentOperation INT,
 										partNumber VARCHAR(45),
-										part_id INT,
 										orderNewStatus VARCHAR(20) NOT NULL,
 										orderOldStatus VARCHAR(20) NOT NULL,
 										plannedHours DECIMAL,
@@ -369,8 +399,7 @@ order_status_changes_table = 	"""	CREATE TABLE order_status_changes
 										statusChangeTS TIMESTAMPTZ NOT NULL,
 										updateTS TIMESTAMPTZ NOT NULL,
 										id INT GENERATED ALWAYS AS IDENTITY,
-										PRIMARY KEY (id),
-										CONSTRAINT fk_part FOREIGN KEY (part_id) REFERENCES part(id)
+										PRIMARY KEY (id)
 									);
 								"""
 
@@ -384,21 +413,18 @@ class Order():
 
 		if row["SCHEDULE_START_DATE"][0] != ' ':
 			self.scheduledStartDate = row["SCHEDULE_START_DATE"]
-			#self.scheduledStartDate = datetime.strptime(row["SCHEDULE_START_DATE"], '%Y/%m/%d %H:%M:%S')
 		else:
 			self.scheduledStartDate = None
 		self.scheduledEndDate = None
 		
 		if row["ACTUAL_START_DATE"][0] != ' ':
 			self.actualStart = row["ACTUAL_START_DATE"]
-			#self.actualStart = datetime.strptime(row["ACTUAL_START_DATE"], '%Y/%m/%d %H:%M:%S')
 		else:
 			self.actualStart = None
 
 		self.actualEnd = None
-		self.part_id = self.getPartID()
+		#self.part_id = self.getPartID()
 		self.currentOperation = None
-		#self.plannedHours = row["PLANNED_DURATION"]
 		self.plannedHours = 0
 		self.site = row["SITE"]
 		self.statusChangeTS = datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S').timestamp()
@@ -406,20 +432,20 @@ class Order():
 		self.totalHours = 0
 		self.updateTS = None
 
-	def getPartID(self):
-		with conn.cursor() as cur:
-			if self.partNumber!= None:
-				cur.execute("""SELECT id
-							FROM part
-							WHERE partnumber = %s; 
-						""",(self.partNumber,))
-
-			part_id = cur.fetchone()
-
-			if part_id != None:
-				self.part_id = part_id[0]
-			else:
-				self.part_id = 0 # NULL 
+#	def getPartID(self):
+#		with conn.cursor() as cur:
+#			if self.partNumber!= None:
+#				cur.execute("""SELECT id
+#							FROM part
+#							WHERE partnumber = %s; 
+#						""",(self.partNumber,))
+#
+#			part_id = cur.fetchone()
+#
+#			if part_id != None:
+#				self.part_id = part_id[0]
+#			else:
+#				self.part_id = 0 # NULL 
 
 	def complete(self):
 		return self.orderNewStatus == "COMPLETE"
@@ -461,18 +487,6 @@ class Order():
 			sum = start_day+diff/scale
 			self.actualStart = sum.strftime('%Y/%m/%d %H:%M:%S')
 
-		#if self.totalPlanedHours!=None:
-		#	self.totalPlanedHours = float(self.totalPlanedHours)/scale
-
-		#if self.plannedHours!=None:
-		#	self.plannedHours = float(self.plannedHours)/scale
-
-		#if self.actualHours!=None:
-		#	self.actualHours = float(self.actualHours)/scale
-
-		#if self.totalHours!=None:
-		#	self.totalHours = float(self.totalHours)/scale
-
 		if self.statusChangeTS != None:
 			statusChangeTS = self.statusChangeTS
 			diff = statusChangeTS - first_event.timestamp()
@@ -492,8 +506,8 @@ class Order():
 		print(str(datetime.fromtimestamp(self.statusChangeTS)) + colored(" INSERT ORDER: ","green") + self.orderNumber)
 		with conn.cursor() as cur:
 			cur.execute("""INSERT INTO order_status_changes VALUES 
-					(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-					""",(self.orderNumber,self.currentOperation,self.partNumber,self.part_id,
+					(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+					""",(self.orderNumber,self.currentOperation,self.partNumber,
 						self.orderNewStatus,self.orderOldStatus,self.plannedHours,
 						self.actualHours,self.totalHours,self.scheduledStartDate,
 						self.scheduledEndDate,self.actualStart,self.actualEnd,self.site,
@@ -584,7 +598,6 @@ class Operation():
 			opHours = average
 		
 		self.plannedHours = float(opHours)
-		#self.statusChangeTS = row ["STATUS_CHANGE_TS"]
 		self.statusChangeTS = datetime.strptime(row["STATUS_CHANGE_TS"], '%Y/%m/%d %H:%M:%S').timestamp()
 		self.updateTS = None
 
@@ -592,12 +605,6 @@ class Operation():
 		self.totalHours = 0
 
 	def updateDates(self,first_event,start_day,scale):
-
-		#if self.actualHours!=None:
-		#	self.actualHours = float(self.actualHours)/scale
-
-		#if self.plannedHours!=None:
-		#	self.plannedHours = float(self.plannedHours)/scale
 
 		if self.statusChangeTS != None:
 			statusChangeTS = self.statusChangeTS
@@ -727,10 +734,6 @@ class SensorEvent():
 		opTotalHours=totalHours
 		self.percentage = int((opActualHours/opTotalHours)*100)
 
-		#print(self)
-		#print("\t " + opEvent.getOrderNumber() + " perc(%)==(" + str(opEvent.getActualHours()) + "+" + str(hoursAftEvent) + ")/(" + str(opTotalHours) + ")")
-		#print("")
-
 		self.updateTS = None
 
 	def setUpdateTS(self,timestamp):
@@ -778,21 +781,21 @@ def readWorkCenter(known_WorkCenters):
 
 	return WorkCenterList
 
-def readPart(known_Parts):
-	PartList = {}
-	with conn.cursor(cursor_factory=RealDictCursor) as cur:
-		if known_Parts != None:
-			cur.execute("SELECT * FROM part WHERE id NOT IN " + known_Parts + ";")
-		else:
-			cur.execute("SELECT * FROM part;")
-		data = cur.fetchall()
-
-		for part in data:
-			decode = json.dumps(part, indent=2, default=str)
-			encode = json.loads(decode)
-			PartList.update({encode["id"]: Entities.Part(encode)})
-
-	return PartList
+#def readPart(known_Parts):
+#	PartList = {}
+#	with conn.cursor(cursor_factory=RealDictCursor) as cur:
+#		if known_Parts != None:
+#			cur.execute("SELECT * FROM part WHERE id NOT IN " + known_Parts + ";")
+#		else:
+#			cur.execute("SELECT * FROM part;")
+#		data = cur.fetchall()
+#
+#		for part in data:
+#			decode = json.dumps(part, indent=2, default=str)
+#			encode = json.loads(decode)
+#			PartList.update({encode["id"]: Entities.Part(encode)})
+#
+#	return PartList
 
 def readNewOrders(knownOrders, time):
 	OrderList = {}

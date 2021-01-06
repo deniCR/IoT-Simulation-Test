@@ -28,22 +28,24 @@ export CRATE_DB_VERSION="3.2"
 export CRATE_DB_ADMIN="4200"
 export CRATE_DB_TP="4300"
 export CRATE_DB="54322"
-
+#Postgresql DB
+export POSTGRES_VERSION="12.0"
+export POSTGRES_PORT="49100"
+export POSTGRES_USER="client"
+export POSTGRES_PASSWORD="123456"
+export POSTGRES_DB="Fake_MES_DB"
+export POSTGRES_IP="localhost"
+#export DB_IP_ADDRESS="192.168.1.2"
+export DB_PORT_ADDRESS=${POSTGRES_PORT}
 
 #Simulation Variables
-export DB_NAME="Fake_MES_DB"
-export DB_USER="client"
-export DB_PASSWORD="123456"
-export DB_IP_ADDRESS="localhost"
-#export DB_IP_ADDRESS="192.168.1.2"
-export DB_PORT_ADDRESS="5432"
 export FIWARE_IP_ADDRESS="localhost"
 #export FIWARE_IP_ADDRESS="192.168.1.2"
 export FIWARE_PORT_ADDRESS=${ORION_PORT}
 export DELAYANALYSIS_IP_ADDRESS="192.168.2.199" 
 export DELAYANALYSIS_PORT_ADDRESS="40001"
 
-time_scale="700"
+time_scale="1500"
 export TIME_SCALE=$time_scale
 
 order_csv="./csv_files/Order_2_weeks.csv"
@@ -57,15 +59,15 @@ cd ./docker
 cd -
 
 #Production Line Simulation
-./src/MES-Generator.py ${order_csv} ${operation_csv} ${time_scale} &
+./src/ProductionLineSimulator.py ${order_csv} ${operation_csv} ${time_scale} &
 
 #DelayAnalysis
-./src/delayAnalysis.py > delayAnalysis_log &
+./src/DelayAnalysis.py > delayAnalysis_log &
 
 #DataProvider
-./src/proxy.py > proxy_log &
+./src/DataProvider.py > proxy_log &
 
 #Device Simulation
-./src/device_simulator.py > device_simulator_log &
+./src/DeviceSimulator.py > device_simulator_log &
 
 wait

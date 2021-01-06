@@ -70,6 +70,8 @@ def main(argv):
 	#Read CSV file and prepare DB
 	print("Start...")
 
+	DB_Entities.setDatabase()
+
 	#Orders and operation events
 	eventDict,numberOfOrders,numberOfOperations,operationsTotalHours,numberOfEvents = DB_Entities.readCSV(Order_csv,Operation_csv)
 

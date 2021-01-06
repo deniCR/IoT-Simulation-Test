@@ -85,12 +85,12 @@ def main():
 
 		#GET Known parts from the broker
 		# - There are no updates to this entities ...
-		known_Parts = Entities.getParts()
+		#known_Parts = Entities.getParts()
 
-		newPartList = DB_Entities.readPart(known_Parts)
-		for part in newPartList.values():
-			part.provision()
-			del part
+		#newPartList = DB_Entities.readPart(known_Parts)
+		#for part in newPartList.values():
+		#	part.provision()
+		#	del part
 
 		#time = 300 #Events from the last T seconds in real time (last ~5min)
 
