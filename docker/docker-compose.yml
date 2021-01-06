@@ -1,10 +1,8 @@
 #
 # Developed from the tutorials provided by FIWARE
 #
-
 version: "3.5"
 services:
-  # Orion is the context broker
   orion:
     image: fiware/orion:${ORION_VERSION}
     hostname: orion
@@ -17,7 +15,7 @@ services:
       - "${ORION_PORT}"
     ports:
       - "${ORION_PORT}:${ORION_PORT}" # localhost:1026
-    command: -dbhost mongo-db -logLevel DEBUG
+    command: -dbhost mongo-db
     healthcheck:
       test: curl --fail -s http://orion:${ORION_PORT}/version || exit 1
 
@@ -75,19 +73,17 @@ services:
       - "${MONGO_DB_PORT}:${MONGO_DB_PORT}" # localhost:27017
     networks:
       - default
-    command: --bind_ip_all --smallfiles
+    command: --bind_ip_all
     volumes:
       - mongo-db:/data
 
   crate-db:
-    image: crate:${CRATE_VERSION:-3.2}
+    image: crate:${CRATE_DB_VERSION}
     hostname: crate-db
     container_name: db-crate
     ports:
-      # Admin UI
-      - "4200:4200"
-      # Transport protocol
-      - "4300:4300"
+      - "${CRATE_DB_ADMIN}:${CRATE_DB_ADMIN}"
+      - "${CRATE_DB_TP}:${CRATE_DB_TP}"
       - "54322:5432"
     command: crate -Clicense.enterprise=false -Cauth.host_based.enabled=false  -Ccluster.name=democluster -Chttp.cors.enabled=true -Chttp.cors.allow-origin="*"
     volumes:

@@ -3,7 +3,6 @@
 import sys
 from datetime import datetime 
 import pytz 
-#import pause
 from time import sleep
 
 import Classes.DB_Entities as DB_Entities
@@ -25,10 +24,6 @@ def event_simulation(eventDict):
 
 		if(shiftTime>0):
 			sleep(shiftTime)
-		#pause.until(ts)
-
-		#ev.setTimestamps(datetime.datetime.now())
-		#print(datetime.datetime.now())
 
 		ev.setUpdateTS(datetime.now(timezone).timestamp())
 
@@ -60,25 +55,20 @@ def scaleConvert(eventDict,actual_start,virtual_start,scale):
 	return newEventDict
 
 def main(argv):
-	WC_csv = 'WorkCenter.csv'
-	Part_csv = 'Part.csv'
-	Order_csv = 'order_change_status_5'
-	Operation_csv = 'operations_change_status_alt_5'
+	Order_csv = 'Orders.csv'
+	Operation_csv = 'Operations.csv'
 	time_scale = 200 # 200 times faster
 
-	if len(argv) == 5:
-		WC_csv = argv[0]
-		Part_csv = argv[1]
-		Order_csv = argv[2]
-		Operation_csv = argv[3]
-		time_scale = float(argv[4])
+	if len(argv) == 3:
+		Order_csv = argv[0]
+		Operation_csv = argv[1]
+		time_scale = float(argv[2])
 	else:
-		print('Event_simulation.py WorkCenter.csv Part.csv Order.csv Operation.csv time_scale')
+		print('ProductionLineSimulation.py Order.csv Operation.csv time_scale')
 		sys.exit()
 
-	#Read CSV file and prepare DB ...
+	#Read CSV file and prepare DB
 	print("Start...")
-	DB_Entities.setStaticEntities(WC_csv,Part_csv)
 
 	#Orders and operation events
 	eventDict,numberOfOrders,numberOfOperations,operationsTotalHours,numberOfEvents = DB_Entities.readCSV(Order_csv,Operation_csv)
@@ -102,12 +92,10 @@ def main(argv):
 	print("Expected end of the simulation: " + str(expected_end) + "\n")
 	
 	eventDict = scaleConvert(eventDict,actual_start,virtual_start,time_scale)
-	#for key,ev in eventDict.items():
-	#	ev.updateDates(actual_start_day,virtual_start_day,time_scale)
 
 	DB_Entities.TestInfo(actual_start.timestamp(),actual_end.timestamp(),virtual_start.timestamp(),virtual_end.timestamp(),numberOfOrders,numberOfOperations,operationsTotalHours,numberOfEvents).insert()
 
-	#Event simulation
+	#Start Event simulation
 	st_ev_sim,end_ev_sim,ev_failed,ev_sucessed = event_simulation(eventDict)
 
 	print("\nEvent simulation start: " + str(st_ev_sim))
