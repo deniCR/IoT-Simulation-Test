@@ -1,7 +1,6 @@
 import json
 import random
 from datetime import datetime
-from termcolor import colored
 
 from . import HTTPCommands as HTTP
 
@@ -57,11 +56,11 @@ class Device():
 	def provision(self):
 		if not(self.exists()):
 			url = self.agent_url
-			print(colored("Device provision: ", "green") + str(self.device_id))
+			print("Device provision: " + str(self.device_id))
 			HTTP.sendRequest("POST",url,HTTP.iot_headers,json.dumps(self.json_entity))
 			return True
 		else:
-			print(colored("Warning - (Duplicate): ","red"),"The device already exists in the broker ...")
+			print("Warning - (Duplicate): " + "The device already exists in the broker ...")
 			return False
 
 	#Load data from the iot-agent

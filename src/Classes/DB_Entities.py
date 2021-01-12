@@ -4,7 +4,6 @@ from datetime import datetime
 import simplejson as json
 from psycopg2.extras import RealDictCursor
 import os
-from termcolor import colored
 
 from . import Entities
 from . import Devices
@@ -277,6 +276,13 @@ def dropTable(cur,table):
 	if(cur.fetchone()[0]):
 		cur.execute("DROP TABLE %s CASCADE;" % (table,))
 
+def tabelExist(table):
+	r = False
+	with conn.cursor() as cur:
+		cur.execute("select * from information_schema.tables where table_name=%s", (table,))
+		r = bool(cur.rowcount)
+
+	return r
 # Insert WC, Parts - from csv files
 def setDatabase():
 	#Delete/Drop existing tables 
@@ -503,7 +509,7 @@ class Order():
 			self.actualEnd = newTime
 
 	def insert(self):
-		print(str(datetime.fromtimestamp(self.statusChangeTS)) + colored(" INSERT ORDER: ","green") + self.orderNumber)
+		print(str(datetime.fromtimestamp(self.statusChangeTS)) + " INSERT ORDER: " + self.orderNumber)
 		with conn.cursor() as cur:
 			cur.execute("""INSERT INTO order_status_changes VALUES 
 					(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -690,7 +696,7 @@ class Operation():
 
 		if(self.order_id != None):
 
-			print(str(datetime.fromtimestamp(self.statusChangeTS)) + colored(" INSERT OPERATION: ","green") + str(self.order) + str(self.operation_id))
+			print(str(datetime.fromtimestamp(self.statusChangeTS)) + " INSERT OPERATION: " + str(self.order) + str(self.operation_id))
 
 			with conn.cursor() as cur:
 				cur.execute("""INSERT INTO operation_status_changes VALUES 
@@ -704,7 +710,7 @@ class Operation():
 			conn.commit()
 			return True
 		else:
-			print(colored("Failed to insert Operations: ","red") + self.order + self.operation_id)
+			print("Failed to insert Operations: " + self.order + self.operation_id)
 
 		return False
 
@@ -754,7 +760,7 @@ class SensorEvent():
 
 	def insert(self):
 
-		print(str(datetime.fromtimestamp(self.timestamp)) + colored(" INSERT EVENT: ","green") + self.operationNumber)
+		print(str(datetime.fromtimestamp(self.timestamp)) + " INSERT EVENT: " + self.operationNumber)
 
 		with conn.cursor() as cur:
 			cur.execute("""INSERT INTO sensor_events VALUES (%s, %s, %s, %s, %s, %s, %s)""",

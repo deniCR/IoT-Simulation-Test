@@ -15,6 +15,10 @@ protocol = "PDI-IoTA-UltraLight"
 apikey = "hfe9iuh83qw9hr8ew9her9"
 ref = "/iot/d"
 
+def wait4SensorEvents():
+	while (not DB_Entities.tabelExist('sensor_events')):
+		sleep(1)
+
 def main():
 
 	service = Entities.Service(fiware,apikey,"Devices",ref)

@@ -1,5 +1,4 @@
 import json
-from termcolor import colored
 from datetime import datetime
 
 from . import HTTPCommands as HTTP
@@ -46,8 +45,7 @@ def getParts():
 
 	return string
 
-#Ao contrário das restantes entidades, as orders podem superar o limite de 1000 entidades com facilidade ...
-#Para contornar isso, os pedidos são repetidos consoante o número de entidades que satisfazem os critérios da query ...
+
 def getRunningOrders():
 	query = HTTP.entities_url + "/?q=orderNewStatus!='COMPLETE';orderNewStatus!='CANCELLED'&type=Order&options=keyValues,count&attrs=id,orderNumber,statusChangeTS"
 
@@ -59,7 +57,6 @@ def getRunningOrders():
 	offSet="0"
 
 	while numberOfOrders < numberOfEntities:
-		#O offset determina o ponto de partida de onde os elementos devem se considerados ...
 		offSet = str(len(orderList))
 
 		response, headers = HTTP.sendRequest("GET",query + "&limit=" + str(limit) + "&offset=" + offSet,HTTP.headers_get_iot)
@@ -97,7 +94,7 @@ def getRunningOrders():
 
 	return orderList,string
 
-#Pode não ser necessário colletar todas as operações ... Pode ser feito para cada order ... ???
+
 def getRunningOperations():
 	query = HTTP.entities_url + "/?q=operationNewStatus!='COMPLETE';operationNewStatus!='CANCELLED'&type=Operation&options=keyValues,count"
 
@@ -109,7 +106,7 @@ def getRunningOperations():
 	offSet="0"
 
 	while numberOfOperations < numberOfEntities:
-		#O offset determina o ponto de partida de onde os elementos devem se considerados ...
+		
 		offSet = str(numberOfOperations)
 
 		response,headers = HTTP.sendRequest("GET",query + "&limit=" + str(limit) + "&offset=" + offSet,HTTP.headers_get_iot)
@@ -256,7 +253,7 @@ class Service():
 			HTTP.sendRequest("POST",url,HTTP.iot_headers,json.dumps(self.json_entity))
 			return True
 		else:
-			print(colored("Warning - (Duplicate): ","red"),"The service already exists in the broker ...")
+			print("Warning - (Duplicate): The service already exists in the broker ...")
 			return False
 
 	def exists(self):
@@ -362,7 +359,7 @@ class Entity:
 
 		self.json_entity = json_entity
 
-	#The addAttr function adds a new attribute to the Entity ??? type ...
+	#The addAttr function adds a new attribute to the Entity
 	def setAttr(self, name, value, type="Text"):
 		if not(name in self.json_entity):
 			self.addAttr(name,type,value)
@@ -370,7 +367,7 @@ class Entity:
 			if isinstance(self.json_entity[name],dict) and "value" in self.json_entity[name]:
 				self.json_entity[name]["value"]=value
 			else:
-				self.json_entity[name]=value #??? Caso em que o json só tem keyValue atributos ...
+				self.json_entity[name]=value
 
 	#The addAttr function adds a new attribute to the Entity
 	def addAttr(self, name, type, value):
@@ -430,7 +427,7 @@ class Entity:
 			HTTP.sendRequest("POST",HTTP.entities_url,HTTP.entities_headers,json.dumps(self.json_entity))
 			return 1
 		else:
-			print(colored("Warning - (Duplicate): ","red"),"The entity: " + str(self) + " already exists in the broker ...")
+			print("Warning - (Duplicate): The entity: " + str(self) + " already exists in the broker ...")
 			return 0
 
 	def update(self):
@@ -440,13 +437,12 @@ class Entity:
 			if isinstance(value,dict):
 				newValues[attr] = value["value"]
 			else:
-				if attr != "id" and attr != "type":  #??? Values with and without the parameters type, and meta-data ...
+				if attr != "id" and attr != "type":
 					newValues[attr] = value
 
 		entity_url = HTTP.entities_url + "/" + self.id
 		atribute_url = entity_url + "/attrs/?options=keyValues"
 
-		# POST can "create" new attrs ... for now the patch is sufficient ... ???
 		HTTP.sendRequest("POST",atribute_url,HTTP.entities_headers,json.dumps(newValues))
 
 	def updateAttr(self, attr):
@@ -461,7 +457,6 @@ class Entity:
 		entity_url = HTTP.entities_url + "/" + self.id
 		atribute_url = entity_url + "/attrs/?options=keyValues"
 
-		# POST can "create" new attrs ... for now the patch is sufficient ... ???
 		HTTP.sendRequest("POST",atribute_url,HTTP.entities_headers,json.dumps(newValues))
 
 	def updateAttrList(self, attrList):
@@ -477,7 +472,6 @@ class Entity:
 		entity_url = HTTP.entities_url + "/" + self.id
 		atribute_url = entity_url + "/attrs/?options=keyValues"
 
-		# POST can "create" new attrs ... for now the patch is sufficient ... ???
 		HTTP.sendRequest("POST",atribute_url,HTTP.entities_headers,json.dumps(newValues))
 
 	#The function exists verifies if the self.id is already present in the broker
@@ -580,7 +574,7 @@ class Order(Entity):
 
 		currentHours = row["currenthours"]
 
-		if orderNewStatus in ("COMPLETE","CANCELLED"): #Change in the Generator ...
+		if orderNewStatus in ("COMPLETE","CANCELLED"):
 			currentHours = totalHours
 		if currentHours!=None:
 			self.addAttr("currentHours","Number",float(currentHours))
@@ -803,11 +797,9 @@ class Operation(Entity):
 		else:
 			actualProgress=0
 
-		#The processDelay should be update in a similar way as the Order.progressDelay ...
-		# through the delayAnalysis sub/not
 		if plannedHours > 0:
 			expectedProgress = int(actualHours/plannedHours*100)
-			#If the value exceeds 100% it means that the operation should have already ended ...
+			#If the value exceeds 100% it means that the operation should have already ended
 			if expectedProgress>100:
 				expectedProgress=100
 			if actualProgress > expectedProgress*1.05:
@@ -836,7 +828,7 @@ class Operation(Entity):
 
 		if plannedHours > 0:
 			expectedProgress = int(actualHours/plannedHours*100)
-			#If the value exceeds 100% it means that the operation should have already ended ...
+
 			if expectedProgress>100:
 				expectedProgress=100
 			if actualProgress > expectedProgress*1.05:

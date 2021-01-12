@@ -54,8 +54,13 @@ def wait4Service():
 	count = 0
 	while count==0:
 		response = HTTPCommands.sendRequest("GET",url_services,HTTPCommands.iot_headers,json.dumps(payload_service))
-		response_json = json.loads(response)
+		
+		print(response)
+
+		response_json = json.loads(response[0])
+
 		count = int(response_json["count"])
+		print(str(count))
 		if count==0:
 			sleep(1)
 			pass
@@ -141,8 +146,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 def main():
 
-	#develop wait service ...
-	#wait4Service()
+	wait4Service()
 	print("The Service has been created!")
 
 	#Subscriptions ...
