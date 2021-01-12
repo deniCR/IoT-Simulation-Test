@@ -37,6 +37,9 @@ export POSTGRES_DB="Fake_MES_DB"
 export POSTGRES_IP="localhost"
 #export DB_IP_ADDRESS="192.168.1.2"
 export DB_PORT_ADDRESS=${POSTGRES_PORT}
+#Grafana
+export GRAFANA_PORT="3000"
+export GRAFANA_VERSION="7.3.6"
 
 #Simulation Variables
 export FIWARE_IP_ADDRESS="localhost"
@@ -48,8 +51,8 @@ export DELAYANALYSIS_PORT_ADDRESS="40001"
 time_scale="1500"
 export TIME_SCALE=$time_scale
 
-order_csv="./csv_files/Order_2_weeks.csv"
-operation_csv="./csv_files/Operation_2_weeks.csv"
+order_csv="./csv_files/Order.csv"
+operation_csv="./csv_files/Operation.csv"
 
 echo "Time scale set to $TIME_SCALE:1"
 
