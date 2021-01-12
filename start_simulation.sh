@@ -38,7 +38,7 @@ export POSTGRES_IP="localhost"
 #export DB_IP_ADDRESS="192.168.1.2"
 export DB_PORT_ADDRESS=${POSTGRES_PORT}
 #Grafana
-export GRAFANA_PORT="3000"
+export GRAFANA_PORT="3003"
 export GRAFANA_VERSION="7.3.6"
 
 #Simulation Variables
@@ -51,8 +51,8 @@ export DELAYANALYSIS_PORT_ADDRESS="40001"
 time_scale="1500"
 export TIME_SCALE=$time_scale
 
-order_csv="./csv_files/Order.csv"
-operation_csv="./csv_files/Operation.csv"
+order_csv="./csv_files/Order_2_weeks.csv"
+operation_csv="./csv_files/Operation_2_weeks.csv"
 
 echo "Time scale set to $TIME_SCALE:1"
 
@@ -61,8 +61,13 @@ cd ./docker
 ./start.sh
 cd -
 
+sleep 5
+
 #Production Line Simulation
 ./src/ProductionLineSimulator.py ${order_csv} ${operation_csv} ${time_scale} &
+
+#Time to create the database and the tables
+sleep 3
 
 #DelayAnalysis
 ./src/DelayAnalysis.py > delayAnalysis_log &

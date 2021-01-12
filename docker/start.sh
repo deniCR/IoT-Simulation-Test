@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Start the Grafana server if needed
-sudo service grafana-server start
+#sudo service grafana-server start
 # Stop services that can interfere with the simulation (or change the ports used)
 #sudo service mongodb stop
 #sudo service postgresql stop
